@@ -3,5 +3,7 @@ name = "deepfinder"
 version = "0.1.0"
 edition = "2021"
 authors = ["Xen0rInspire"]
+license = "MIT"
+description = "A low level Rust tool to find duplicates in large directories."
 
 [dependencies]
