@@ -37,10 +37,8 @@ pub fn walk(dir: &str, counts: &mut Counter) -> io::Result<()> {
             if path.is_dir() {
                 walk(&format!("{}/{}", dir, name), counts)?;
             }
-        } else {
-            if path.is_dir() {
-                walk(&format!("{}/{}", dir, name), counts)?;
-            }
+        } else if path.is_dir() {
+            walk(&format!("{}/{}", dir, name), counts)?;
         }
     }
     println!("{:?}", paths);
