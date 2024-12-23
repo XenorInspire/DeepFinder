@@ -1,0 +1,97 @@
+// Internal crates.
+use crate::error::SystemError;
+
+// External crates.
+use std::path::Path;
+
+/// This function is responsible for checking a path/filename.
+///
+/// # Arguments
+///
+/// * `path` - A string slice that holds the path/filename to check.
+///
+/// # Returns
+///
+/// Ok(String) if the path/filename is valid, containing the full path, SystemError otherwise.
+///
+pub fn is_valid_path(path: &str) -> Result<String, SystemError> {
+    let filename: String = match Path::new(path).file_name() {
+        Some(f) => match f.to_str() {
+            Some(f) => f.to_string(),
+            None => return Err(SystemError::InvalidPath(path.to_string())),
+        },
+        None => return Err(SystemError::InvalidPath(path.to_string())),
+    };
+
+    let invalid_chars: &[char] = get_invalid_chars();
+    if filename.chars().any(|c| invalid_chars.contains(&c)) {
+        return Err(SystemError::InvalidFilename(filename.to_string()));
+    }
+
+    let full_path: String = if !Path::new(path).is_absolute() {
+        let current_dir: String = match std::env::current_dir() {
+            Ok(c) => match c.to_str() {
+                Some(s) => s.to_string(),
+                None => return Err(SystemError::InvalidPath(path.to_string())),
+            },
+            Err(e) => {
+                return Err(SystemError::UnableToCreateFile(
+                    path.to_string(),
+                    e.to_string(),
+                ))
+            }
+        };
+        current_dir + "/" + path
+    } else {
+        path.to_string()
+    };
+
+    #[cfg(target_family = "windows")]
+    if full_path.len() > 260 {
+        return Err(SystemError::PathTooLong(path.to_string()));
+    }
+
+    if !check_if_parent_folder_exists(&full_path) {
+        return Err(SystemError::ParentFolderDoesntExist(path.to_string()));
+    }
+    Ok(full_path)
+}
+
+/// This function is responsible for checking if the parent folder exists from a given file path.
+///
+/// # Arguments
+///
+/// * `file_path` - A string slice that holds the file path.
+///
+/// # Returns
+///
+/// True if the parent folder exists, false otherwise.
+///
+pub fn check_if_parent_folder_exists(file_path: &str) -> bool {
+    match Path::new(file_path).parent() {
+        Some(p) => p.exists(),
+        None => false,
+    }
+}
+
+/// This function sends the invalid chars for windows platforms.
+///
+/// # Returns
+///
+/// '<', '>', ':', '"', '/', '\\', '|', '?', '*', '+', ',', ';', '=', '@', '\0', '\r', '\n' chars.
+///
+#[cfg(target_family = "windows")]
+fn get_invalid_chars() -> &'static [char] {
+    &['<', '>', ':', '"', '/', '\\', '|', '?', '*', '+', ',', ';', '=', '@', '\0', '\r', '\n',]
+}
+
+/// This function sends the invalid chars for unix platforms.
+///
+/// # Returns
+///
+/// '/', '\0', '\r', '\n' chars.
+///
+#[cfg(target_family = "unix")]
+fn get_invalid_chars() -> &'static [char] {
+    &['/', '\0', '\r', '\n']
+}

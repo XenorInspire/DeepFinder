@@ -1,5 +1,8 @@
+// Internal crates.
+use crate::{error::{ArgError, DeepFinderError}, system};
+
 // External crates.
-use clap::{Arg, ArgAction, Command};
+use clap::{builder::TypedValueParser, Arg, ArgAction, ArgMatches, Command};
 
 /// This struct is built from the values/choices of the user.
 ///
@@ -13,11 +16,11 @@ struct FindingConfig {
 enum CliOutput {
     Standard,
     CsvStdin,
-    CsvFile,
+    CsvFile(String),
     JsonStdin,
-    JsonFile,
+    JsonFile(String),
     XmlStdin,
-    XmlFile,
+    XmlFile(String),
 }
 
 /// This function is responsible for building the command context for the CLI with the clap framework.
@@ -32,6 +35,16 @@ fn build_command_context() -> Command {
         .disable_help_flag(true) // Keep the help handling in the run() function
         .disable_version_flag(true) // Keep the version handling in the run() function
         .arg(
+            Arg::new("path")
+                .index(1)
+                .required(true)
+                .value_name("path")
+                .value_parser(clap::builder::NonEmptyStringValueParser::new().try_map(|path| {
+                    check_output_arg(&path).map_err(|e| clap::Error::raw(clap::error::ErrorKind::InvalidValue, e.to_string()))
+                 }))
+                .help("The path to the directory to search for duplicates"),
+        )
+        .arg(
             Arg::new("name")
                 .short('n')
                 .long("name")
@@ -42,7 +55,22 @@ fn build_command_context() -> Command {
             Arg::new("hash_algorithm")
                 .short('a')
                 .long("hash-algorithm")
-                .value_parser(vec!["md5", "sha1", "sha224", "sha256", "sha384", "sha512", "sha3-224", "sha3-256", "sha3-384", "sha3-512", "blake2b", "blake2s", "whirlpool"])
+                .value_parser(vec![
+                    "md5",
+                    "sha1",
+                    "sha224",
+                    "sha256",
+                    "sha384",
+                    "sha512",
+                    "sha3-224",
+                    "sha3-256",
+                    "sha3-384",
+                    "sha3-512",
+                    "blake2b",
+                    "blake2s",
+                    "whirlpool",
+                ])
+                .action(ArgAction::Set)
                 .help("Allow duplicate finding by one or multiple hash algorithms")
                 .value_name("hash"),
         )
@@ -59,7 +87,13 @@ fn build_command_context() -> Command {
                 .long("csv-display")
                 .help("Export the results to stdin in CSV format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all(["xml_display", "xml_output", "json_display", "json_output", "csv_output"]),
+                .conflicts_with_all([
+                    "xml_display",
+                    "xml_output",
+                    "json_display",
+                    "json_output",
+                    "csv_output",
+                ]),
         )
         .arg(
             Arg::new("csv_output")
@@ -68,7 +102,13 @@ fn build_command_context() -> Command {
                 .help("Export the results in a CSV file")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .value_name("path")
-                .conflicts_with_all(["xml_display", "xml_output", "json_display", "json_output", "csv_display"]),
+                .conflicts_with_all([
+                    "xml_display",
+                    "xml_output",
+                    "json_display",
+                    "json_output",
+                    "csv_display",
+                ]),
         )
         .arg(
             Arg::new("json_display")
@@ -76,7 +116,13 @@ fn build_command_context() -> Command {
                 .long("json-display")
                 .help("Export the results to stdin in JSON format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all(["xml_display", "xml_output", "json_output", "csv_display", "csv_output"]),
+                .conflicts_with_all([
+                    "xml_display",
+                    "xml_output",
+                    "json_output",
+                    "csv_display",
+                    "csv_output",
+                ]),
         )
         .arg(
             Arg::new("json_output")
@@ -85,7 +131,13 @@ fn build_command_context() -> Command {
                 .help("Export the results in a JSON file")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .value_name("path")
-                .conflicts_with_all(["xml_display", "xml_output", "json_display", "csv_display", "csv_output"]),
+                .conflicts_with_all([
+                    "xml_display",
+                    "xml_output",
+                    "json_display",
+                    "csv_display",
+                    "csv_output",
+                ]),
         )
         .arg(
             Arg::new("xml_display")
@@ -93,7 +145,13 @@ fn build_command_context() -> Command {
                 .long("xml-display")
                 .help("Export the results to stdin in XML format")
                 .action(ArgAction::SetTrue)
-                .conflicts_with_all(["xml_output", "json_display", "json_output", "csv_display", "csv_output"]),
+                .conflicts_with_all([
+                    "xml_output",
+                    "json_display",
+                    "json_output",
+                    "csv_display",
+                    "csv_output",
+                ]),
         )
         .arg(
             Arg::new("xml_output")
@@ -102,7 +160,13 @@ fn build_command_context() -> Command {
                 .help("Export the results in a XML file")
                 .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .value_name("path")
-                .conflicts_with_all(["xml_display", "json_display", "json_output", "csv_display", "csv_output"]),
+                .conflicts_with_all([
+                    "xml_display",
+                    "json_display",
+                    "json_output",
+                    "csv_display",
+                    "csv_output",
+                ]),
         )
         .arg(
             Arg::new("version")
@@ -142,7 +206,7 @@ fn display_help() {
 ///
 /// Ok if the program has been executed, DeepFinderError otherwise.
 ///
-pub fn run() -> Result<(), ()> {
+pub fn run() -> Result<(), DeepFinderError> {
     let mut command_context: Command = build_command_context();
     if let Ok(matches) = command_context.clone().try_get_matches() {
         // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message)
@@ -158,5 +222,53 @@ pub fn run() -> Result<(), ()> {
     }
 
     command_context.build();
+    parse_user_choices(command_context.get_matches()).map_err(DeepFinderError::ArgError)?;
     Ok(())
+}
+
+/// This function is responsible for parsing the user's choices and building the FindingConfig struct.
+///
+fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, ArgError> {
+    let mut config: FindingConfig = FindingConfig {
+        enable_search_by_name: matches.get_flag("name"),
+        include_hidden_files: matches.get_flag("hidden_files"),
+        hash: matches.get_many::<String>("hash_algorithm").unwrap_or_default().cloned().collect(),
+        output: CliOutput::Standard,
+    };
+
+    config.output = match (
+        matches.get_flag("csv_display"),
+        matches.get_one::<String>("csv_output"),
+        matches.get_flag("json_display"),
+        matches.get_one::<String>("json_output"),
+        matches.get_flag("xml_display"),
+        matches.get_one::<String>("xml_output"),
+    ) {
+        (true, _, _, _, _, _) => CliOutput::CsvStdin,
+        (_, Some(path), _, _, _, _) => CliOutput::CsvFile(path.to_string()),
+        (_, _, true, _, _, _) => CliOutput::JsonStdin,
+        (_, _, _, Some(path), _, _) => CliOutput::JsonFile(path.to_string()),
+        (_, _, _, _, true, _) => CliOutput::XmlStdin,
+        (_, _, _, _, _, Some(path)) => CliOutput::XmlFile(path.to_string()),
+        _ => CliOutput::Standard,
+    };
+
+    Ok(config)
+}
+
+/// This function is responsible for checking the path for the 'output' arguments, if it's a valid path on the filesystem.
+///
+/// # Arguments
+///
+/// * `path` - The path to check.
+///
+/// # Returns
+///
+/// Ok(String) if the path is valid, WorgenXError otherwise.
+///
+fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
+    match system::is_valid_path(path) {
+        Ok(full_path) => Ok(full_path),
+        Err(e) => Err(DeepFinderError::SystemError(e)),
+    }
 }
