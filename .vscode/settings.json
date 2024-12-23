@@ -1,0 +1,12 @@
+{
+    "rust-analyzer.showUnlinkedFileNotification": false,
+    "rust-analyzer.check.overrideCommand": [
+        "cargo",
+        "clippy",
+        "--message-format=json",
+        "--all-targets",
+        "--workspace",
+        "--all",
+    ],
+    "rust-analyzer.cargo.features": "all",
+}
