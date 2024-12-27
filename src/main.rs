@@ -23,7 +23,7 @@ fn main() -> io::Result<()> {
             std::process::exit(0);
         }
         Err(e) => {
-            println!("{:?}", e);
+            println!("{}", e);
             std::process::exit(1);
         }
     }
