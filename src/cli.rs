@@ -1,12 +1,16 @@
 // Internal crates.
-use crate::{error::{ArgError, DeepFinderError}, system};
+use crate::{
+    error::{ArgError, DeepFinderError},
+    system,
+};
 
 // External crates.
-use clap::{builder::TypedValueParser, Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 /// This struct is built from the values/choices of the user.
 ///
 struct FindingConfig {
+    pub path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
     pub hash: Vec<String>,
@@ -37,11 +41,8 @@ fn build_command_context() -> Command {
         .arg(
             Arg::new("path")
                 .index(1)
-                .required(true)
                 .value_name("path")
-                .value_parser(clap::builder::NonEmptyStringValueParser::new().try_map(|path| {
-                    check_output_arg(&path).map_err(|e| clap::Error::raw(clap::error::ErrorKind::InvalidValue, e.to_string()))
-                 }))
+                .value_parser(clap::builder::NonEmptyStringValueParser::new())
                 .help("The path to the directory to search for duplicates"),
         )
         .arg(
@@ -70,7 +71,6 @@ fn build_command_context() -> Command {
                     "blake2s",
                     "whirlpool",
                 ])
-                .action(ArgAction::Set)
                 .help("Allow duplicate finding by one or multiple hash algorithms")
                 .value_name("hash"),
         )
@@ -222,17 +222,36 @@ pub fn run() -> Result<(), DeepFinderError> {
     }
 
     command_context.build();
-    parse_user_choices(command_context.get_matches()).map_err(DeepFinderError::ArgError)?;
+    parse_user_choices(command_context.get_matches())?;
     Ok(())
 }
 
 /// This function is responsible for parsing the user's choices and building the FindingConfig struct.
 ///
-fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, ArgError> {
+/// # Arguments
+///
+/// * `matches` - The ArgMatches struct containing the user's choices.
+///
+/// # Returns
+///
+/// Ok(FindingConfig) if the user's choices are valid, ArgError otherwise.
+///
+fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderError> {
+    let path: String = if let Some(path) = matches.get_one::<String>("path") {
+        system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError)?
+    } else {
+        return Err(DeepFinderError::ArgError(ArgError::NoPathSpecified));
+    };
+
     let mut config: FindingConfig = FindingConfig {
+        path,
         enable_search_by_name: matches.get_flag("name"),
         include_hidden_files: matches.get_flag("hidden_files"),
-        hash: matches.get_many::<String>("hash_algorithm").unwrap_or_default().cloned().collect(),
+        hash: matches
+            .get_many::<String>("hash_algorithm")
+            .unwrap_or_default()
+            .cloned()
+            .collect(),
         output: CliOutput::Standard,
     };
 
@@ -245,11 +264,20 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, ArgError> {
         matches.get_one::<String>("xml_output"),
     ) {
         (true, _, _, _, _, _) => CliOutput::CsvStdin,
-        (_, Some(path), _, _, _, _) => CliOutput::CsvFile(path.to_string()),
+        (_, Some(path), _, _, _, _) => {
+            let temp_path: String = check_output_arg(path)?;
+            CliOutput::CsvFile(temp_path.to_string())
+        }
         (_, _, true, _, _, _) => CliOutput::JsonStdin,
-        (_, _, _, Some(path), _, _) => CliOutput::JsonFile(path.to_string()),
+        (_, _, _, Some(path), _, _) => {
+            let temp_path: String = check_output_arg(path)?;
+            CliOutput::JsonFile(temp_path.to_string())
+        }
         (_, _, _, _, true, _) => CliOutput::XmlStdin,
-        (_, _, _, _, _, Some(path)) => CliOutput::XmlFile(path.to_string()),
+        (_, _, _, _, _, Some(path)) => {
+            let temp_path: String = check_output_arg(path)?;
+            CliOutput::XmlFile(temp_path.to_string())
+        }
         _ => CliOutput::Standard,
     };
 
@@ -267,7 +295,7 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, ArgError> {
 /// Ok(String) if the path is valid, WorgenXError otherwise.
 ///
 fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
-    match system::is_valid_path(path) {
+    match system::is_valid_file_path(path) {
         Ok(full_path) => Ok(full_path),
         Err(e) => Err(DeepFinderError::SystemError(e)),
     }

@@ -14,7 +14,7 @@ use std::path::Path;
 ///
 /// Ok(String) if the path/filename is valid, containing the full path, SystemError otherwise.
 ///
-pub fn is_valid_path(path: &str) -> Result<String, SystemError> {
+pub fn is_valid_file_path(path: &str) -> Result<String, SystemError> {
     let filename: String = match Path::new(path).file_name() {
         Some(f) => match f.to_str() {
             Some(f) => f.to_string(),
@@ -28,23 +28,7 @@ pub fn is_valid_path(path: &str) -> Result<String, SystemError> {
         return Err(SystemError::InvalidFilename(filename.to_string()));
     }
 
-    let full_path: String = if !Path::new(path).is_absolute() {
-        let current_dir: String = match std::env::current_dir() {
-            Ok(c) => match c.to_str() {
-                Some(s) => s.to_string(),
-                None => return Err(SystemError::InvalidPath(path.to_string())),
-            },
-            Err(e) => {
-                return Err(SystemError::UnableToCreateFile(
-                    path.to_string(),
-                    e.to_string(),
-                ))
-            }
-        };
-        current_dir + "/" + path
-    } else {
-        path.to_string()
-    };
+    let full_path: String = build_full_path(path)?;
 
     #[cfg(target_family = "windows")]
     if full_path.len() > 260 {
@@ -74,6 +58,26 @@ pub fn check_if_parent_folder_exists(file_path: &str) -> bool {
     }
 }
 
+/// This function is responsible for checking a folder path.
+/// This function is used to check the directory where the duplicate files are supposed to be saved.
+///
+/// # Arguments
+///
+/// * `path` - A string slice that holds the path to check.
+///
+/// # Returns
+///
+/// Ok(String) if the path is valid, containing the full path, SystemError otherwise.
+///
+pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
+    let full_path: String = build_full_path(path)?;
+    if !Path::new(&full_path).exists() {
+        return Err(SystemError::InvalidFolder(full_path));
+    }
+
+    Ok(full_path)
+}
+
 /// This function sends the invalid chars for windows platforms.
 ///
 /// # Returns
@@ -94,4 +98,33 @@ fn get_invalid_chars() -> &'static [char] {
 #[cfg(target_family = "unix")]
 fn get_invalid_chars() -> &'static [char] {
     &['/', '\0', '\r', '\n']
+}
+
+/// This function is reponsible for building the entire path of a file/folder.
+/// 
+/// # Arguments
+/// 
+/// * `path` - A string slice that holds the path to build.
+/// 
+/// Returns
+/// 
+/// A string containing the full path. DeepFinderError if the path is invalid or it can't get the current directory.
+/// 
+fn build_full_path(path: &str) -> Result<String, SystemError> {
+    let full_path: String = if !Path::new(path).is_absolute() {
+        let current_dir: String = match std::env::current_dir() {
+            Ok(c) => match c.to_str() {
+                Some(s) => s.to_string(),
+                None => return Err(SystemError::InvalidPath(path.to_string())),
+            },
+            Err(e) => {
+                return Err(SystemError::UnableToGetCurrentDir(e.to_string()));
+            }
+        };
+        current_dir + "/" + path.trim_start_matches("./")
+    } else {
+        path.to_string()
+    };
+
+    Ok(full_path)
 }
