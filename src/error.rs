@@ -1,18 +1,18 @@
 // External crates.
 use core::fmt;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DeepFinderError {
     ArgError(ArgError),
     SystemError(SystemError),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ArgError {
     NoPathSpecified,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SystemError {
     InvalidPath(String),
     InvalidFilename(String),

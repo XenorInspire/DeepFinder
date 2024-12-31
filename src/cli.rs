@@ -304,3 +304,25 @@ fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
         Err(e) => Err(DeepFinderError::SystemError(e)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_user_choices() {
+        let command_context: Command = build_command_context();
+        let matches: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-C", "/tmp/output.csv"]);
+        let expected: FindingConfig = FindingConfig {
+            path: "/tmp".to_string(),
+            enable_search_by_name: true,
+            include_hidden_files: true,
+            hash: vec!["md5".to_string(), "sha256".to_string()],
+            output: CliOutput::CsvFile("/tmp/output.csv".to_string()),
+        };
+        assert_eq!(parse_user_choices(matches).unwrap(), expected);
+
+        let matches_error1: ArgMatches = command_context.get_matches_from(vec!["deepfinder", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Missing searching path.
+        assert_eq!(parse_user_choices(matches_error1).unwrap_err(), DeepFinderError::ArgError(ArgError::NoPathSpecified));
+    }
+}
