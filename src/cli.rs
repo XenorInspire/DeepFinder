@@ -36,7 +36,7 @@ enum CliOutput {
 ///
 /// # Returns
 ///
-/// Command containing the different features of WorgenX.
+/// Command containing the different features of DeepFinder.
 ///
 fn build_command_context() -> Command {
     Command::new("deepfinder")
@@ -239,7 +239,7 @@ pub fn run() -> Result<(), DeepFinderError> {
 ///
 /// # Returns
 ///
-/// Ok(FindingConfig) if the user's choices are valid, ArgError otherwise.
+/// Ok(FindingConfig) if the user's choices are valid, DeepFinderError otherwise.
 ///
 fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderError> {
     let path: String = matches
@@ -296,7 +296,7 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
 ///
 /// # Returns
 ///
-/// Ok(String) if the path is valid, WorgenXError otherwise.
+/// Ok(String) if the path is valid, DeepFinderError otherwise.
 ///
 fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
     match system::is_valid_file_path(path) {
