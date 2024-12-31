@@ -219,6 +219,9 @@ pub fn run() -> Result<(), DeepFinderError> {
             println!("DeepFinder v{}", env!("CARGO_PKG_VERSION"));
             return Ok(());
         }
+
+    } else {
+        return Err(DeepFinderError::ArgError(ArgError::NoPathSpecified));
     }
 
     command_context.build();
