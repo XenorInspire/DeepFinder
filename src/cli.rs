@@ -9,7 +9,8 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 /// This struct is built from the values/choices of the user.
 ///
-struct FindingConfig {
+#[derive(PartialEq, Debug)]
+struct FindingConfig<> {
     pub path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
@@ -17,6 +18,10 @@ struct FindingConfig {
     pub output: CliOutput,
 }
 
+/// This enum is used to determine the output format of the program.
+/// If no output format is specified, the program will display the results in STDIN, in a raw format.
+/// 
+#[derive(PartialEq, Debug)]
 enum CliOutput {
     Standard,
     CsvStdin,
@@ -56,6 +61,7 @@ fn build_command_context() -> Command {
             Arg::new("hash_algorithm")
                 .short('a')
                 .long("hash-algorithm")
+                .value_delimiter(',')
                 .value_parser(vec![
                     "md5",
                     "sha1",
@@ -207,25 +213,21 @@ fn display_help() {
 /// Ok if the program has been executed, DeepFinderError otherwise.
 ///
 pub fn run() -> Result<(), DeepFinderError> {
-    let mut command_context: Command = build_command_context();
-    if let Ok(matches) = command_context.clone().try_get_matches() {
-        // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message)
-        if matches.get_flag("help") {
-            display_help();
-            return Ok(());
-        }
-        // Call println!() instead of clap version with the -v or --version arguments (better control of the version message)
-        if matches.get_flag("version") {
-            println!("DeepFinder v{}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
+    let command_context: Command = build_command_context();
+    let matches: ArgMatches = command_context.try_get_matches().map_err(|_| DeepFinderError::ArgError(ArgError::NoPathSpecified))?;
 
-    } else {
-        return Err(DeepFinderError::ArgError(ArgError::NoPathSpecified));
+    // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message).
+    if matches.get_flag("help") {
+        display_help();
+        return Ok(());
+    }
+    // Call println!() instead of clap version with the -v or --version arguments (better control of the version message).
+    if matches.get_flag("version") {
+        println!("DeepFinder v{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
     }
 
-    command_context.build();
-    parse_user_choices(command_context.get_matches())?;
+    parse_user_choices(matches)?;
     Ok(())
 }
 
@@ -240,11 +242,10 @@ pub fn run() -> Result<(), DeepFinderError> {
 /// Ok(FindingConfig) if the user's choices are valid, ArgError otherwise.
 ///
 fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderError> {
-    let path: String = if let Some(path) = matches.get_one::<String>("path") {
-        system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError)?
-    } else {
-        return Err(DeepFinderError::ArgError(ArgError::NoPathSpecified));
-    };
+    let path: String = matches
+        .get_one::<String>("path")
+        .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
+        .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?;
 
     let mut config: FindingConfig = FindingConfig {
         path,
