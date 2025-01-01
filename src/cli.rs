@@ -214,7 +214,9 @@ fn display_help() {
 ///
 pub fn run() -> Result<(), DeepFinderError> {
     let command_context: Command = build_command_context();
-    let matches: ArgMatches = command_context.try_get_matches().map_err(|_| DeepFinderError::ArgError(ArgError::NoPathSpecified))?;
+    let matches: ArgMatches = command_context
+        .try_get_matches()
+        .map_err(|_| DeepFinderError::ArgError(ArgError::NoPathSpecified))?;
 
     // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message).
     if matches.get_flag("help") {
@@ -307,6 +309,7 @@ fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
 
 #[cfg(test)]
 mod tests {
+    use crate::error::SystemError;
     use super::*;
 
     #[test]
@@ -322,7 +325,13 @@ mod tests {
         };
         assert_eq!(parse_user_choices(matches).unwrap(), expected);
 
-        let matches_error1: ArgMatches = command_context.get_matches_from(vec!["deepfinder", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Missing searching path.
+        let matches_error1: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Missing searching path.
         assert_eq!(parse_user_choices(matches_error1).unwrap_err(), DeepFinderError::ArgError(ArgError::NoPathSpecified));
+
+        let matches_error2: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "/test", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Wrong searching path.
+        assert_eq!(parse_user_choices(matches_error2).unwrap_err(), DeepFinderError::SystemError(SystemError::InvalidFolder("/test".to_string())));
+
+        let matches_error3: ArgMatches = command_context.get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-J", "/test/output.json"]); // Wrong output path.
+        assert_eq!(parse_user_choices(matches_error3).unwrap_err(), DeepFinderError::SystemError(SystemError::ParentFolderDoesntExist("/test/output.json".to_string())));
     }
 }
