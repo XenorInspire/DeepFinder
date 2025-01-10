@@ -1,9 +1,30 @@
+// Internal crates.
+use crate::{cli::FindingConfig, error::DeepFinderError};
+
 // External crates.
-use std::{fs, io};
+use std::{env, fs, io};
 
 pub struct Counter {
     pub dirs: i32,
     pub files: i32,
+}
+
+/// This function is the scheduler for the search engine.
+/// 
+/// # Arguments
+/// 
+/// * `config` - The FindingConfig struct with the user's configuration.
+/// 
+/// # Returns
+/// 
+/// The result of the search engine scheduler, DeepFinderError otherwise.
+/// 
+pub fn search_engine_scheduler(config: FindingConfig) -> Result<(), DeepFinderError> {
+    let dir: String = env::args().nth(1).unwrap_or(".".to_string());
+    let mut counts: Counter = Counter { dirs: 0, files: 0 };
+    // search_engine::walk(&dir, &mut counts)?;
+    println!("\n{} directories, {} files", counts.dirs, counts.files);
+    Ok(())
 }
 
 pub fn walk(dir: &str, counts: &mut Counter) -> io::Result<()> {

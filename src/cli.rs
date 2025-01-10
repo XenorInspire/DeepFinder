@@ -6,11 +6,12 @@ use crate::{
 
 // External crates.
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use std::process::exit;
 
 /// This struct is built from the values/choices of the user.
 ///
 #[derive(PartialEq, Debug)]
-struct FindingConfig<> {
+pub struct FindingConfig {
     pub path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
@@ -22,7 +23,7 @@ struct FindingConfig<> {
 /// If no output format is specified, the program will display the results in STDIN, in a raw format.
 /// 
 #[derive(PartialEq, Debug)]
-enum CliOutput {
+pub enum CliOutput {
     Standard,
     CsvStdin,
     CsvFile(String),
@@ -212,7 +213,7 @@ fn display_help() {
 ///
 /// Ok if the program has been executed, DeepFinderError otherwise.
 ///
-pub fn run() -> Result<(), DeepFinderError> {
+pub fn run() -> Result<FindingConfig, DeepFinderError> {
     let command_context: Command = build_command_context();
     let matches: ArgMatches = command_context
         .try_get_matches()
@@ -221,16 +222,15 @@ pub fn run() -> Result<(), DeepFinderError> {
     // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message).
     if matches.get_flag("help") {
         display_help();
-        return Ok(());
+        exit(0);
     }
     // Call println!() instead of clap version with the -v or --version arguments (better control of the version message).
     if matches.get_flag("version") {
         println!("DeepFinder v{}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
+        exit(0);
     }
 
-    parse_user_choices(matches)?;
-    Ok(())
+    parse_user_choices(matches)
 }
 
 /// This function is responsible for parsing the user's choices and building the FindingConfig struct.
