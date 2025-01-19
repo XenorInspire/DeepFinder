@@ -21,6 +21,7 @@ pub enum SystemError {
     PathTooLong(String),
     ParentFolderDoesntExist(String),
     InvalidFolder(String),
+    UnableToReadDir(String),
     UnableToGetCurrentDir(String),
 }
 
@@ -51,6 +52,7 @@ impl fmt::Display for SystemError {
             #[cfg(target_family = "windows")]
             SystemError::PathTooLong(p) => write!(f, "Error: path too long '{}'", p),
             SystemError::ParentFolderDoesntExist(p) => write!(f, "Error: parent folder doesn't exist '{}'", p),
+            SystemError::UnableToReadDir(p) => write!(f, "Error: unable to read directory '{}'", p),
             SystemError::UnableToGetCurrentDir(e) => write!(f, "Error: unable to get current directory.\n{}", e),
         }
     }
