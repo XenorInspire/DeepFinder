@@ -57,7 +57,11 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
     });
 
     for path in paths.iter() {
-        let name: &str = path.file_name().unwrap().to_str().unwrap();
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+
         index -= 1;
 
         if index == 0 {
