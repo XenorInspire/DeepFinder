@@ -251,7 +251,7 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
 
     let mut config: FindingConfig = FindingConfig {
         path,
-        enable_search_by_name: matches.get_flag("name"),
+        enable_search_by_name: matches.get_flag("name") || !matches.get_flag("hash_algorithm"), // By default, search by name if no hash algorithm is specified.
         include_hidden_files: matches.get_flag("hidden_files"),
         hash: matches
             .get_many::<String>("hash_algorithm")
