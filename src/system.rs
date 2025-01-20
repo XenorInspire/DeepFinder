@@ -128,3 +128,66 @@ fn build_full_path(path: &str) -> Result<String, SystemError> {
 
     Ok(full_path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{env, path::PathBuf};
+
+    #[test]
+    fn test_is_valid_file_path() {
+        let relative_path: &str = "./test.txt";
+        let invalid_path: &str = "test.txt\0";
+
+        #[cfg(target_family = "windows")]
+        let absolute_path: &str = "C:/Users/test.txt";
+
+        #[cfg(target_family = "unix")]
+        let absolute_path: &str = "/home/test.txt";
+
+        assert!(is_valid_file_path(relative_path).is_ok());
+        assert!(is_valid_file_path(absolute_path).is_ok());
+        assert!(is_valid_file_path(invalid_path).is_err());
+    }
+
+    #[test]
+    fn test_is_valid_folder() {
+        let relative_folder_path: &str = "./";
+        let invalid_folder_path: &str = "./test1/test2/";
+
+        #[cfg(target_family = "windows")]
+        let absolute_folder_path: &str = "C:/Users/";
+
+        #[cfg(target_family = "unix")]
+        let absolute_folder_path: &str = "/home/";
+
+        assert!(is_valid_folder_path(relative_folder_path).is_ok());
+        assert!(is_valid_folder_path(absolute_folder_path).is_ok());
+        assert!(is_valid_folder_path(invalid_folder_path).is_err());
+    }
+
+    #[test]
+    fn test_check_if_folder_exists() {
+        let valid_relative_file_path: &str = "./test.txt";
+        let invalid_file_path: &str = "./test/test.txt";
+
+        #[cfg(target_family = "windows")]
+        let valid_absolute_file_path: &str = "C:/Users/test.txt";
+
+        #[cfg(target_family = "unix")]
+        let valid_absolute_file_path: &str = "/home/test.txt";
+
+        assert!(check_if_parent_folder_exists(valid_relative_file_path));
+        assert!(!check_if_parent_folder_exists(invalid_file_path));
+        assert!(check_if_parent_folder_exists(valid_absolute_file_path));
+    }
+
+    #[test]
+    fn test_build_full_path() {
+        let binding: PathBuf = env::current_dir().unwrap();
+        let current_path: &str = binding.to_str().unwrap();
+
+        assert_eq!(build_full_path("./"), Ok(current_path.to_string() + "/"));
+        assert_eq!(build_full_path("./test.txt"), Ok(current_path.to_string() + "/test.txt"));
+    }
+}
