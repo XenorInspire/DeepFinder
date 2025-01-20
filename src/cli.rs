@@ -195,7 +195,7 @@ fn display_help() {
     println!("Usage: deepfinder <path> [options]");
     println!("Options:");
     println!("  -n, --name\t\t\t\tFind the duplicates by their name.\n\t\t\t\t\tSelected by default if both -n and -a arguments are not specified.");
-    println!("  -a, --hash-algorithm\t\t\tFind the duplicates from the hash.\n\t\t\t\t\tYou can choose between: md5, sha1, sha224, sha256, sha384, sha512,\n\t\t\t\t\tsha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.");
+    println!("  -a, --hash-algorithm\t\t\tFind the duplicates from the hash.\n\t\t\t\t\tIt can be used to compare the content of the files.\n\t\t\t\t\tYou can choose between: md5, sha1, sha224, sha256, sha384, sha512,\n\t\t\t\t\tsha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.");
     println!("  -f, --hidden-files\t\t\tEnable search for hidden files.");
     println!("  -c <path>, --csv-display\t\tExport the results to stdin in a CSV format.");
     println!("  -C <path>, --csv-output <path>\tExport the results in a CSV file.");
