@@ -1,7 +1,7 @@
 // Internal crates.
 use crate::{
     cli::FindingConfig,
-    error::{DeepFinderError, SystemError},
+    error::{DeepFinderError, SystemError}, system::{build_virtual_files, VirtualFile},
 };
 
 // External crates.
@@ -18,8 +18,10 @@ use std::fs;
 /// The result of the search engine scheduler, DeepFinderError otherwise.
 ///
 pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderError> {
-    let files: Vec<String> = search_files(&config.path, config.include_hidden_files).map_err(DeepFinderError::SystemError)?;
-    println!("\n{:?}, {} files", files, files.len());
+    let file_paths: Vec<String> = search_files(&config.path, config.include_hidden_files).map_err(DeepFinderError::SystemError)?;
+    let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
+    println!("\n{:?} - {} files", virtual_files[0], virtual_files.len());
+
     Ok(())
 }
 
@@ -76,9 +78,7 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
     // Add the files to the vector.
     files.extend(paths.iter().filter_map(|p| {
         if p.is_file() {
-            p.file_name()
-                .and_then(|n| n.to_str())
-                .map(|n| n.to_string())
+            p.to_str().map(|s| s.to_string())
         } else {
             None
         }

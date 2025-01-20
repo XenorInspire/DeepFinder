@@ -2,7 +2,20 @@
 use crate::error::SystemError;
 
 // External crates.
-use std::path::Path;
+use std::{collections::HashMap, fs, path::Path};
+#[cfg(target_family = "unix")]
+use std::os::unix::fs::MetadataExt;
+
+/// This struct represents a virtual file on the system.
+/// It permits the program to store the file's name, size, full path and checksum properly.
+///
+#[derive(Debug)]
+pub struct VirtualFile {
+    name: String,
+    size: u64,
+    full_path: String,
+    checksum: HashMap<String, String>,
+}
 
 /// This function is responsible for checking a path/filename.
 ///
@@ -129,6 +142,57 @@ fn build_full_path(path: &str) -> Result<String, SystemError> {
     Ok(full_path)
 }
 
+/// This function is responsible for building virtual files from a list of file paths.
+/// 
+/// Arguments
+/// 
+/// * `file_paths` - A vector of strings that holds the file paths.
+/// 
+/// Returns
+/// 
+/// A vector of VirtualFile. Empty if no paths are provided.
+/// 
+pub fn build_virtual_files(file_paths: Vec<String>) -> Vec<VirtualFile> {
+    let mut virtual_files: Vec<VirtualFile> = Vec::new();
+    for path in file_paths.iter() {
+        let file: VirtualFile = VirtualFile {
+            name: match Path::new(path).file_name().and_then(|n| n.to_str()) {
+                Some(n) => n.to_string(),
+                None => continue,
+            },
+            size: get_file_size(path),
+            full_path: path.to_string(),
+            checksum: HashMap::new(),
+        };
+        virtual_files.push(file);
+    }
+    virtual_files
+}
+
+/// This function is responsible for getting the size of a file.
+/// It uses the metadata from the file to get the size in bytes.
+///
+/// # Arguments
+///
+/// * `file_path` - A string slice that holds the file path.
+///
+/// # Returns
+///
+/// The size of the file in bytes. 0 if the file doesn't exist or can't get the metadata.
+///
+fn get_file_size(file_path: &str) -> u64 {
+    let metadata = match fs::metadata(file_path) {
+        Ok(m) => m,
+        Err(_) => return 0,
+    };
+
+    #[cfg(target_family = "windows")]
+    return metadata.file_size();
+
+    #[cfg(target_family = "unix")]
+    return metadata.size();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,5 +253,20 @@ mod tests {
 
         assert_eq!(build_full_path("./"), Ok(current_path.to_string() + "/"));
         assert_eq!(build_full_path("./test.txt"), Ok(current_path.to_string() + "/test.txt"));
+    }
+
+    #[test]
+    fn test_build_virtual_files() {
+        let file_paths: Vec<String> = vec!["/test1/test1.txt".to_string(), "/test2/test2.txt".to_string()];
+        let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
+
+        assert_eq!(virtual_files.len(), 2);
+        assert_eq!(virtual_files[0].name, "test1.txt");
+        assert_eq!(virtual_files[1].name, "test2.txt");
+        assert_eq!(virtual_files[0].size, 0);
+        assert_eq!(virtual_files[1].size, 0);
+        assert_eq!(virtual_files[0].full_path, "/test1/test1.txt");
+        assert_eq!(virtual_files[1].full_path, "/test2/test2.txt");
+
     }
 }
