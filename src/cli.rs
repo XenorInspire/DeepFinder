@@ -272,17 +272,17 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
         (true, _, _, _, _, _) => CliOutput::CsvStdin,
         (_, Some(path), _, _, _, _) => {
             let temp_path: String = check_output_arg(path)?;
-            CliOutput::CsvFile(temp_path.to_string())
+            CliOutput::CsvFile(temp_path)
         }
         (_, _, true, _, _, _) => CliOutput::JsonStdin,
         (_, _, _, Some(path), _, _) => {
             let temp_path: String = check_output_arg(path)?;
-            CliOutput::JsonFile(temp_path.to_string())
+            CliOutput::JsonFile(temp_path)
         }
         (_, _, _, _, true, _) => CliOutput::XmlStdin,
         (_, _, _, _, _, Some(path)) => {
             let temp_path: String = check_output_arg(path)?;
-            CliOutput::XmlFile(temp_path.to_string())
+            CliOutput::XmlFile(temp_path)
         }
         _ => CliOutput::Standard,
     };
