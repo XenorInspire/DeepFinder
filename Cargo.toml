@@ -7,4 +7,4 @@ license = "MIT"
 description = "A low level Rust tool to find duplicates in large directories."
 
 [dependencies]
-clap = { version = "4.5.26", features = ["std"], default-features = false }
+clap = { version = "4.5.30", features = ["std"], default-features = false }
