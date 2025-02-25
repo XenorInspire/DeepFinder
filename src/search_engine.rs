@@ -22,6 +22,10 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
     println!("\n{:?} - {} files", virtual_files[0], virtual_files.len());
 
+    if let Some(hash_algorithms) = &config.hash {
+        hash_handler(hash_algorithms, &virtual_files)?;
+    }
+
     Ok(())
 }
 
@@ -85,4 +89,20 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
     }));
 
     Ok(files)
+}
+
+/// This function is responsible for scheduling the hashing of files and the different threads.
+///
+/// # Arguments
+///
+/// * `hash_algorithms` - A string slice that holds the directory to search.
+/// * `virtual_files` - A boolean that indicates if hidden files should be included in the search or not.
+///
+/// # Returns
+///
+/// A vector of strings with the files found in the directory, SystemError otherwise.
+///
+fn hash_handler(hash_algorithms: &[String], virtual_files: &[VirtualFile]) -> Result<(), DeepFinderError> {
+    let num_cores: usize = num_cpus::get(); // Get the number of logical cores.
+    Ok(())
 }

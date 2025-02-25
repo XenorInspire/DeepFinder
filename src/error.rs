@@ -23,6 +23,7 @@ pub enum SystemError {
     InvalidFolder(String),
     UnableToReadDir(String),
     UnableToGetCurrentDir(String),
+    UnsupportedHashAlgorithm(String),
 }
 
 impl fmt::Display for DeepFinderError {
@@ -54,6 +55,7 @@ impl fmt::Display for SystemError {
             SystemError::ParentFolderDoesntExist(p) => write!(f, "Error: parent folder doesn't exist '{}'", p),
             SystemError::UnableToReadDir(p) => write!(f, "Error: unable to read directory '{}'", p),
             SystemError::UnableToGetCurrentDir(e) => write!(f, "Error: unable to get current directory.\n{}", e),
+            SystemError::UnsupportedHashAlgorithm(a) => write!(f, "Error: unsupported hash algorithm '{}'", a),
         }
     }
 }

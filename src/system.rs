@@ -2,7 +2,15 @@
 use crate::error::SystemError;
 
 // External crates.
+use blake2::{Blake2b512, Blake2s256};
+use digest::Digest;
+use md5::Md5;
+use sha1::Sha1;
+use sha2::{Sha224, Sha256, Sha384, Sha512};
+use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};
 use std::{collections::HashMap, fs, path::Path};
+use whirlpool::Whirlpool;
+
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 
@@ -11,10 +19,10 @@ use std::os::unix::fs::MetadataExt;
 ///
 #[derive(Debug)]
 pub struct VirtualFile {
-    name: String,
-    size: u64,
-    full_path: String,
-    checksum: Option<HashMap<String, String>>,
+    pub name: String,
+    pub size: u64,
+    pub full_path: String,
+    pub checksum: Option<HashMap<String, String>>,
 }
 
 /// This function is responsible for checking a path/filename.
@@ -91,6 +99,56 @@ pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
     Ok(full_path)
 }
 
+/// This function is responsible for managing file hashing.
+/// It returns the checksum of the file, using the hash algorithm provided.
+/// If the hash algorithm is not supported, it returns an error.
+///
+/// # Arguments
+///
+/// * `file` - The password to hash.
+/// * `hash` - The hash algorithm to use.
+///
+/// # Returns
+///
+/// The hashed file, SystemError otherwise.
+///
+pub fn manage_hash(file: String, hash: &str) -> Result<String, SystemError> {
+    match hash {
+        "md5" => Ok(hash_with_digest(Md5::new(), file)),
+        "sha1" => Ok(hash_with_digest(Sha1::new(), file)),
+        "sha224" => Ok(hash_with_digest(Sha224::new(), file)),
+        "sha256" => Ok(hash_with_digest(Sha256::new(), file)),
+        "sha384" => Ok(hash_with_digest(Sha384::new(), file)),
+        "sha512" => Ok(hash_with_digest(Sha512::new(), file)),
+        "sha3-224" => Ok(hash_with_digest(Sha3_224::new(), file)),
+        "sha3-256" => Ok(hash_with_digest(Sha3_256::new(), file)),
+        "sha3-384" => Ok(hash_with_digest(Sha3_384::new(), file)),
+        "sha3-512" => Ok(hash_with_digest(Sha3_512::new(), file)),
+        "blake2b-512" => Ok(hash_with_digest(Blake2b512::new(), file)),
+        "blake2s-256" => Ok(hash_with_digest(Blake2s256::new(), file)),
+        "whirlpool" => Ok(hash_with_digest(Whirlpool::new(), file)),
+        _ => Err(SystemError::UnsupportedHashAlgorithm(hash.to_string())),
+    }
+}
+
+/// This function is responsible for hashing a password with a specific hash algorithm.
+/// It returns the hashed password.
+///
+/// # Arguments
+///
+/// * `hasher` - The hasher to use, it must implement the Digest trait.
+/// * `file` - The file to hash.
+///
+/// # Returns
+///
+/// The hashed file.
+///
+fn hash_with_digest<D: Digest>(mut hasher: D, file: String) -> String {
+    hasher.update(file.as_bytes());
+    let result = hasher.finalize();
+    hex::encode(result)
+}
+
 /// This function sends the invalid chars for windows platforms.
 ///
 /// # Returns
@@ -114,15 +172,15 @@ fn get_invalid_chars() -> &'static [char] {
 }
 
 /// This function is reponsible for building the entire path of a file/folder.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `path` - A string slice that holds the path to build.
-/// 
+///
 /// Returns
-/// 
+///
 /// A string containing the full path. DeepFinderError if the path is invalid or it can't get the current directory.
-/// 
+///
 fn build_full_path(path: &str) -> Result<String, SystemError> {
     let full_path: String = if !Path::new(path).is_absolute() {
         let current_dir: String = match std::env::current_dir() {
@@ -143,15 +201,15 @@ fn build_full_path(path: &str) -> Result<String, SystemError> {
 }
 
 /// This function is responsible for building virtual files from a list of file paths.
-/// 
+///
 /// Arguments
-/// 
+///
 /// * `file_paths` - A vector of strings that holds the file paths.
-/// 
+///
 /// Returns
-/// 
-/// A vector of VirtualFile. Empty if no paths are provided.
-/// 
+///
+/// A vector of VirtualFile structs. Empty if no paths are provided.
+///
 pub fn build_virtual_files(file_paths: Vec<String>) -> Vec<VirtualFile> {
     let mut virtual_files: Vec<VirtualFile> = Vec::new();
     for path in file_paths.iter() {
@@ -257,7 +315,10 @@ mod tests {
 
     #[test]
     fn test_build_virtual_files() {
-        let file_paths: Vec<String> = vec!["/test1/test1.txt".to_string(), "/test2/test2.txt".to_string()];
+        let file_paths: Vec<String> = vec![
+            "/test1/test1.txt".to_string(),
+            "/test2/test2.txt".to_string(),
+        ];
         let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
 
         assert_eq!(virtual_files.len(), 2);
@@ -269,6 +330,5 @@ mod tests {
         assert_eq!(virtual_files[1].size, 0);
         assert_eq!(virtual_files[0].full_path, "/test1/test1.txt");
         assert_eq!(virtual_files[1].full_path, "/test2/test2.txt");
-
     }
 }
