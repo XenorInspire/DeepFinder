@@ -14,7 +14,7 @@ pub struct VirtualFile {
     name: String,
     size: u64,
     full_path: String,
-    checksum: HashMap<String, String>,
+    checksum: Option<HashMap<String, String>>,
 }
 
 /// This function is responsible for checking a path/filename.
@@ -162,7 +162,7 @@ pub fn build_virtual_files(file_paths: Vec<String>) -> Vec<VirtualFile> {
             },
             size: get_file_size(path),
             full_path: path.to_string(),
-            checksum: HashMap::new(),
+            checksum: None,
         };
         virtual_files.push(file);
     }
@@ -263,6 +263,8 @@ mod tests {
         assert_eq!(virtual_files.len(), 2);
         assert_eq!(virtual_files[0].name, "test1.txt");
         assert_eq!(virtual_files[1].name, "test2.txt");
+        assert_eq!(virtual_files[0].checksum, None);
+        assert_eq!(virtual_files[1].checksum, None);
         assert_eq!(virtual_files[0].size, 0);
         assert_eq!(virtual_files[1].size, 0);
         assert_eq!(virtual_files[0].full_path, "/test1/test1.txt");

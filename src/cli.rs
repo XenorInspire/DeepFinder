@@ -15,7 +15,7 @@ pub struct FindingConfig {
     pub path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
-    pub hash: Vec<String>,
+    pub hash: Option<Vec<String>>,
     pub output: CliOutput,
 }
 
@@ -249,15 +249,23 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
         .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
         .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?;
 
+    let hash: Option<Vec<String>> = if matches.contains_id("hash_algorithm") {
+        Some(
+            matches
+                .get_many::<String>("hash_algorithm")
+                .unwrap_or_default()
+                .cloned()
+                .collect(),
+        )
+    } else {
+        None
+    };
+    
     let mut config: FindingConfig = FindingConfig {
         path,
         enable_search_by_name: matches.get_flag("name") || !matches.get_flag("hash_algorithm"), // By default, search by name if no hash algorithm is specified.
         include_hidden_files: matches.get_flag("hidden_files"),
-        hash: matches
-            .get_many::<String>("hash_algorithm")
-            .unwrap_or_default()
-            .cloned()
-            .collect(),
+        hash,
         output: CliOutput::Standard,
     };
 
@@ -320,7 +328,7 @@ mod tests {
             path: "/tmp".to_string(),
             enable_search_by_name: true,
             include_hidden_files: true,
-            hash: vec!["md5".to_string(), "sha256".to_string()],
+            hash: Some(vec!["md5".to_string(), "sha256".to_string()]),
             output: CliOutput::CsvFile("/tmp/output.csv".to_string()),
         };
         assert_eq!(parse_user_choices(matches).unwrap(), expected);
