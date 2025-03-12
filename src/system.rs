@@ -14,6 +14,9 @@ use whirlpool::Whirlpool;
 #[cfg(target_family = "unix")]
 use std::os::unix::fs::MetadataExt;
 
+#[cfg(target_family = "windows")]
+use std::os::windows::fs::MetadataExt;
+
 /// This struct represents a virtual file on the system.
 /// It permits the program to store the file's name, size, full path and checksum properly.
 ///
