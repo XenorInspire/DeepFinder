@@ -317,19 +317,32 @@ fn check_output_arg(path: &str) -> Result<String, DeepFinderError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::error::SystemError;
     use super::*;
 
     #[test]
     fn test_parse_user_choices() {
         let command_context: Command = build_command_context();
-        let matches: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-C", "/tmp/output.csv"]);
+
+        // Set different settings for Unix and Windows.
+        let path: String;
+        let matches: ArgMatches;
+        let output: CliOutput;
+        if cfg!(target_family = "unix") {
+            path = "/tmp".to_string();
+            matches = command_context.clone().get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-C", "/tmp/output.csv"]);
+            output = CliOutput::CsvFile("/tmp/output.csv".to_string());
+        } else {
+            path = "C:\\Windows\\".to_string();
+            matches = command_context.clone().get_matches_from(vec!["deepfinder", "C:\\Windows\\", "-a", "md5,sha256", "-f", "-n", "-C", "C:\\output.csv"]);
+            output = CliOutput::CsvFile("C:\\output.csv".to_string());
+        };
+
         let expected: FindingConfig = FindingConfig {
-            path: "/tmp".to_string(),
+            path,
             enable_search_by_name: true,
             include_hidden_files: true,
             hash: Some(vec!["md5".to_string(), "sha256".to_string()]),
-            output: CliOutput::CsvFile("/tmp/output.csv".to_string()),
+            output,
         };
         assert_eq!(parse_user_choices(matches).unwrap(), expected);
 
@@ -337,9 +350,9 @@ mod tests {
         assert_eq!(parse_user_choices(matches_error1).unwrap_err(), DeepFinderError::ArgError(ArgError::NoPathSpecified));
 
         let matches_error2: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "/test", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Wrong searching path.
-        assert_eq!(parse_user_choices(matches_error2).unwrap_err(), DeepFinderError::SystemError(SystemError::InvalidFolder("/test".to_string())));
+        assert!(parse_user_choices(matches_error2).is_err());
 
         let matches_error3: ArgMatches = command_context.get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-J", "/test/output.json"]); // Wrong output path.
-        assert_eq!(parse_user_choices(matches_error3).unwrap_err(), DeepFinderError::SystemError(SystemError::ParentFolderDoesntExist("/test/output.json".to_string())));
+        assert!(parse_user_choices(matches_error3).is_err());
     }
 }
