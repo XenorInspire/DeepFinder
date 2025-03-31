@@ -8,7 +8,7 @@ use md5::Md5;
 use sha1::Sha1;
 use sha2::{Sha224, Sha256, Sha384, Sha512};
 use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fs::{self, File}, io::{BufReader, Read}, path::{Path, PathBuf}};
 use whirlpool::Whirlpool;
 
 #[cfg(target_family = "unix")]
@@ -115,7 +115,7 @@ pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
 ///
 /// The hashed file, SystemError otherwise.
 ///
-pub fn manage_hash(file: String, hash: &str) -> Result<String, SystemError> {
+pub fn manage_hash(file: &str, hash: &str) -> Result<String, SystemError> {
     match hash {
         "md5" => Ok(hash_with_digest(Md5::new(), file)),
         "sha1" => Ok(hash_with_digest(Sha1::new(), file)),
@@ -134,8 +134,8 @@ pub fn manage_hash(file: String, hash: &str) -> Result<String, SystemError> {
     }
 }
 
-/// This function is responsible for hashing a password with a specific hash algorithm.
-/// It returns the hashed password.
+/// This function is responsible for calculating file hash with a specified algorithm.
+/// It returns the file hash.
 ///
 /// # Arguments
 ///
@@ -146,10 +146,21 @@ pub fn manage_hash(file: String, hash: &str) -> Result<String, SystemError> {
 ///
 /// The hashed file.
 ///
-fn hash_with_digest<D: Digest>(mut hasher: D, file: String) -> String {
-    hasher.update(file.as_bytes());
-    let result = hasher.finalize();
-    hex::encode(result)
+fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> String {
+    let input = File::open(path).unwrap();
+    let mut reader = BufReader::new(input);
+
+    let digest = {
+        let mut buffer = [0; 1024];
+        loop {
+            let count = reader.read(&mut buffer).unwrap();
+            if count == 0 { break }
+            hasher.update(&buffer[..count]);
+        }
+        hasher.finalize()
+    };
+
+    hex::encode(digest)
 }
 
 /// This function sends the invalid chars for windows platforms.

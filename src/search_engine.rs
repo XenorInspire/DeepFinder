@@ -1,11 +1,12 @@
 // Internal crates.
 use crate::{
     cli::FindingConfig,
-    error::{DeepFinderError, SystemError}, system::{build_virtual_files, VirtualFile},
+    error::{DeepFinderError, SystemError},
+    system::{self, build_virtual_files, VirtualFile},
 };
 
 // External crates.
-use std::fs;
+use std::{fs, thread::JoinHandle};
 
 /// This function is the scheduler for the search engine.
 ///
@@ -19,11 +20,11 @@ use std::fs;
 ///
 pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderError> {
     let file_paths: Vec<String> = search_files(&config.path, config.include_hidden_files).map_err(DeepFinderError::SystemError)?;
-    let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
+    let mut virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
     println!("\n{:?} - {} files", virtual_files[0], virtual_files.len());
 
     if let Some(hash_algorithms) = &config.hash {
-        hash_handler(hash_algorithms, &virtual_files)?;
+        hash_handler(hash_algorithms, &mut virtual_files)?;
     }
 
     Ok(())
@@ -102,7 +103,24 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
 ///
 /// A vector of strings with the files found in the directory, SystemError otherwise.
 ///
-fn hash_handler(hash_algorithms: &[String], virtual_files: &[VirtualFile]) -> Result<(), DeepFinderError> {
+fn hash_handler(hash_algorithms: &[String], virtual_files: &mut [VirtualFile]) -> Result<(), DeepFinderError> {
     let num_cores: usize = num_cpus::get(); // Get the number of logical cores.
+    let mut threads: Vec<JoinHandle<()>> = Vec::new();
+    let mut nb_of_files_per_thread: usize = virtual_files.len() / num_cores;
+    let nb_of_passwd_last_thread: usize = nb_of_files_per_thread + virtual_files.len() % num_cores;
+
+    for hash_algorithm in hash_algorithms {
+        for _ in 0..num_cores {
+            
+        }
+    }
+
     Ok(())
+}
+
+fn calculate_hash(hash_algorithm: &str, files_to_hash: &mut [VirtualFile], idx_start: usize, idx_end: usize) {
+    for i in idx_start..=idx_end {
+        let hash: String = system::manage_hash(&files_to_hash[i].full_path, hash_algorithm).unwrap();
+        // call virtualFile method to update checksum array
+    }
 }
