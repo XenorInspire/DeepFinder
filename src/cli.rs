@@ -249,27 +249,11 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
         .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
         .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?;
 
-    let hash: Option<Vec<String>> = if matches.contains_id("hash_algorithm") {
-        Some(
-            matches
-                .get_many::<String>("hash_algorithm")
-                .unwrap_or_default()
-                .cloned()
-                .collect(),
-        )
-    } else {
-        None
-    };
-    
-    let mut config: FindingConfig = FindingConfig {
-        path,
-        enable_search_by_name: matches.get_flag("name") || !matches.get_flag("hash_algorithm"), // By default, search by name if no hash algorithm is specified.
-        include_hidden_files: matches.get_flag("hidden_files"),
-        hash,
-        output: CliOutput::Standard,
-    };
+    let hash: Option<Vec<String>> = matches
+        .get_many::<String>("hash_algorithm")
+        .map(|values| values.cloned().collect());
 
-    config.output = match (
+    let output: CliOutput = match (
         matches.get_flag("csv_display"),
         matches.get_one::<String>("csv_output"),
         matches.get_flag("json_display"),
@@ -278,24 +262,21 @@ fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderEr
         matches.get_one::<String>("xml_output"),
     ) {
         (true, _, _, _, _, _) => CliOutput::CsvStdin,
-        (_, Some(path), _, _, _, _) => {
-            let temp_path: String = check_output_arg(path)?;
-            CliOutput::CsvFile(temp_path)
-        }
+        (_, Some(path), _, _, _, _) => CliOutput::CsvFile(check_output_arg(path)?),
         (_, _, true, _, _, _) => CliOutput::JsonStdin,
-        (_, _, _, Some(path), _, _) => {
-            let temp_path: String = check_output_arg(path)?;
-            CliOutput::JsonFile(temp_path)
-        }
+        (_, _, _, Some(path), _, _) => CliOutput::JsonFile(check_output_arg(path)?),
         (_, _, _, _, true, _) => CliOutput::XmlStdin,
-        (_, _, _, _, _, Some(path)) => {
-            let temp_path: String = check_output_arg(path)?;
-            CliOutput::XmlFile(temp_path)
-        }
+        (_, _, _, _, _, Some(path)) => CliOutput::XmlFile(check_output_arg(path)?),
         _ => CliOutput::Standard,
     };
 
-    Ok(config)
+    Ok(FindingConfig {
+        path,
+        enable_search_by_name: matches.get_flag("name") || !matches.contains_id("hash_algorithm"),
+        include_hidden_files: matches.get_flag("hidden_files"),
+        hash,
+        output,
+    })
 }
 
 /// This function is responsible for checking the path for the 'output' arguments, if it's a valid path on the filesystem.
