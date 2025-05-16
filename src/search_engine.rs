@@ -20,7 +20,7 @@ use std::{fs, thread::JoinHandle};
 ///
 pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderError> {
     let file_paths: Vec<String> = search_files(&config.path, config.include_hidden_files).map_err(DeepFinderError::SystemError)?;
-    let mut virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
+    let mut virtual_files: Vec<VirtualFile> = build_virtual_files(&file_paths);
     println!("\n{:?} - {} files", virtual_files[0], virtual_files.len());
 
     if let Some(hash_algorithms) = &config.hash {
@@ -63,12 +63,8 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
         aname.cmp(bname)
     });
 
-    for path in paths.iter() {
-        let name = match path.file_name().and_then(|n| n.to_str()) {
-            Some(name) => name,
-            None => continue,
-        };
-
+    for path in &paths {
+        let Some(name) = path.file_name().and_then(|n| n.to_str()) else { continue };
         index -= 1;
 
         if index == 0 {
@@ -83,7 +79,7 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
     // Add the files to the vector.
     files.extend(paths.iter().filter_map(|p| {
         if p.is_file() {
-            p.to_str().map(|s| s.to_string())
+            p.to_str().map(ToString::to_string)
         } else {
             None
         }

@@ -230,7 +230,7 @@ pub fn run() -> Result<FindingConfig, DeepFinderError> {
         exit(0);
     }
 
-    parse_user_choices(matches)
+    parse_user_choices(&matches)
 }
 
 /// This function is responsible for parsing the user's choices and building the FindingConfig struct.
@@ -243,7 +243,7 @@ pub fn run() -> Result<FindingConfig, DeepFinderError> {
 ///
 /// Ok(FindingConfig) if the user's choices are valid, DeepFinderError otherwise.
 ///
-fn parse_user_choices(matches: ArgMatches) -> Result<FindingConfig, DeepFinderError> {
+fn parse_user_choices(matches: &ArgMatches) -> Result<FindingConfig, DeepFinderError> {
     let path: String = matches
         .get_one::<String>("path")
         .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
@@ -325,15 +325,15 @@ mod tests {
             hash: Some(vec!["md5".to_string(), "sha256".to_string()]),
             output,
         };
-        assert_eq!(parse_user_choices(matches).unwrap(), expected);
+        assert_eq!(parse_user_choices(&matches).unwrap(), expected);
 
         let matches_error1: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Missing searching path.
-        assert_eq!(parse_user_choices(matches_error1).unwrap_err(), DeepFinderError::ArgError(ArgError::NoPathSpecified));
+        assert_eq!(parse_user_choices(&matches_error1).unwrap_err(), DeepFinderError::ArgError(ArgError::NoPathSpecified));
 
         let matches_error2: ArgMatches = command_context.clone().get_matches_from(vec!["deepfinder", "/test", "-a", "md5,sha256", "-f", "-n", "-J", "./output.json"]); // Wrong searching path.
-        assert!(parse_user_choices(matches_error2).is_err());
+        assert!(parse_user_choices(&matches_error2).is_err());
 
         let matches_error3: ArgMatches = command_context.get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-J", "/test/output.json"]); // Wrong output path.
-        assert!(parse_user_choices(matches_error3).is_err());
+        assert!(parse_user_choices(&matches_error3).is_err());
     }
 }

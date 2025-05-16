@@ -8,7 +8,7 @@ use md5::Md5;
 use sha1::Sha1;
 use sha2::{Sha224, Sha256, Sha384, Sha512};
 use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};
-use std::{collections::HashMap, fs::{self, File}, io::{BufReader, Read}, path::{Path, PathBuf}};
+use std::{collections::HashMap, fs::{self, File}, io::{BufReader, Read}, path::Path};
 use whirlpool::Whirlpool;
 
 #[cfg(target_family = "unix")]
@@ -49,7 +49,7 @@ pub fn is_valid_file_path(path: &str) -> Result<String, SystemError> {
 
     let invalid_chars: &[char] = get_invalid_chars();
     if filename.chars().any(|c| invalid_chars.contains(&c)) {
-        return Err(SystemError::InvalidFilename(filename.to_string()));
+        return Err(SystemError::InvalidFilename(filename));
     }
 
     let full_path: String = build_full_path(path)?;
@@ -76,10 +76,7 @@ pub fn is_valid_file_path(path: &str) -> Result<String, SystemError> {
 /// True if the parent folder exists, false otherwise.
 ///
 pub fn check_if_parent_folder_exists(file_path: &str) -> bool {
-    match Path::new(file_path).parent() {
-        Some(p) => p.exists(),
-        None => false,
-    }
+    Path::new(file_path).parent().is_some_and(Path::exists)
 }
 
 /// This function is responsible for checking a folder path.
@@ -170,7 +167,7 @@ fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> String {
 /// '<', '>', ':', '"', '/', '\\', '|', '?', '*', '+', ',', ';', '=', '@', '\0', '\r', '\n' chars.
 ///
 #[cfg(target_family = "windows")]
-fn get_invalid_chars() -> &'static [char] {
+const fn get_invalid_chars() -> &'static [char] {
     &['<', '>', ':', '"', '/', '\\', '|', '?', '*', '+', ',', ';', '=', '@', '\0', '\r', '\n',]
 }
 
@@ -181,7 +178,7 @@ fn get_invalid_chars() -> &'static [char] {
 /// '/', '\0', '\r', '\n' chars.
 ///
 #[cfg(target_family = "unix")]
-fn get_invalid_chars() -> &'static [char] {
+const fn get_invalid_chars() -> &'static [char] {
     &['/', '\0', '\r', '\n']
 }
 
@@ -196,20 +193,20 @@ fn get_invalid_chars() -> &'static [char] {
 /// A string containing the full path. DeepFinderError if the path is invalid or it can't get the current directory.
 ///
 fn build_full_path(path: &str) -> Result<String, SystemError> {
-    let full_path: String = if !Path::new(path).is_absolute() {
-        let current_dir: String = match std::env::current_dir() {
-            Ok(c) => match c.to_str() {
-                Some(s) => s.to_string(),
-                None => return Err(SystemError::InvalidPath(path.to_string())),
-            },
-            Err(e) => {
-                return Err(SystemError::UnableToGetCurrentDir(e.to_string()));
-            }
-        };
-        current_dir + "/" + path.trim_start_matches("./")
-    } else {
-        path.to_string()
-    };
+    let full_path: String = if Path::new(path).is_absolute() {
+         path.to_string()
+     } else {
+         let current_dir: String = match std::env::current_dir() {
+             Ok(c) => match c.to_str() {
+                 Some(s) => s.to_string(),
+                 None => return Err(SystemError::InvalidPath(path.to_string())),
+             },
+             Err(e) => {
+                 return Err(SystemError::UnableToGetCurrentDir(e.to_string()));
+             }
+         };
+         current_dir + "/" + path.trim_start_matches("./")
+     };
 
     Ok(full_path)
 }
@@ -224,9 +221,9 @@ fn build_full_path(path: &str) -> Result<String, SystemError> {
 ///
 /// A vector of VirtualFile structs. Empty if no paths are provided.
 ///
-pub fn build_virtual_files(file_paths: Vec<String>) -> Vec<VirtualFile> {
+pub fn build_virtual_files(file_paths: &Vec<String>) -> Vec<VirtualFile> {
     let mut virtual_files: Vec<VirtualFile> = Vec::new();
-    for path in file_paths.iter() {
+    for path in file_paths {
         let file: VirtualFile = VirtualFile {
             name: match Path::new(path).file_name().and_then(|n| n.to_str()) {
                 Some(n) => n.to_string(),
@@ -253,10 +250,7 @@ pub fn build_virtual_files(file_paths: Vec<String>) -> Vec<VirtualFile> {
 /// The size of the file in bytes. 0 if the file doesn't exist or can't get the metadata.
 ///
 fn get_file_size(file_path: &str) -> u64 {
-    let metadata = match fs::metadata(file_path) {
-        Ok(m) => m,
-        Err(_) => return 0,
-    };
+    let Ok(metadata) = fs::metadata(file_path) else { return 0 };
 
     #[cfg(target_family = "windows")]
     return metadata.file_size();
@@ -333,7 +327,7 @@ mod tests {
             "/test1/test1.txt".to_string(),
             "/test2/test2.txt".to_string(),
         ];
-        let virtual_files: Vec<VirtualFile> = build_virtual_files(file_paths);
+        let virtual_files: Vec<VirtualFile> = build_virtual_files(&file_paths);
 
         assert_eq!(virtual_files.len(), 2);
         assert_eq!(virtual_files[0].name, "test1.txt");
