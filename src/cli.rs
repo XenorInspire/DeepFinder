@@ -74,8 +74,8 @@ fn build_command_context() -> Command {
                     "sha3-256",
                     "sha3-384",
                     "sha3-512",
-                    "blake2b",
-                    "blake2s",
+                    "blake2b-512",
+                    "blake2s-256",
                     "whirlpool",
                 ])
                 .help("Allow duplicate finding by one or multiple hash algorithms")
@@ -217,7 +217,7 @@ pub fn run() -> Result<FindingConfig, DeepFinderError> {
     let command_context: Command = build_command_context();
     let matches: ArgMatches = command_context
         .try_get_matches()
-        .map_err(|_| DeepFinderError::ArgError(ArgError::NoPathSpecified))?;
+        .map_err(|_| DeepFinderError::ArgError(ArgError::SyntaxError))?;
 
     // Call display_help() instead of clap help with the -h or --help arguments (better control of the help message).
     if matches.get_flag("help") {

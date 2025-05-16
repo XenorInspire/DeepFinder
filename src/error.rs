@@ -10,6 +10,7 @@ pub enum DeepFinderError {
 #[derive(Debug, PartialEq)]
 pub enum ArgError {
     NoPathSpecified,
+    SyntaxError,
 }
 
 #[derive(Debug, PartialEq)]
@@ -39,6 +40,7 @@ impl fmt::Display for ArgError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::NoPathSpecified => write!(f, "Error: no path specified.\nUsage: deefinder <path> [options]\nTry 'deefinder --help' for more information."),
+            Self::SyntaxError => write!(f, "Error: syntax error, please check the command line arguments.\nUsage: deefinder <path> [options]\nTry 'deefinder --help' for more information."),
         }
     }
 }
