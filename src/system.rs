@@ -8,7 +8,12 @@ use md5::Md5;
 use sha1::Sha1;
 use sha2::{Sha224, Sha256, Sha384, Sha512};
 use sha3::{Sha3_224, Sha3_256, Sha3_384, Sha3_512};
-use std::{collections::HashMap, fs::{self, File}, io::{BufReader, Read}, path::Path};
+use std::{
+    collections::HashMap,
+    fs::{self, File},
+    io::{BufReader, Read},
+    path::Path,
+};
 use whirlpool::Whirlpool;
 
 #[cfg(target_family = "unix")]
@@ -20,13 +25,54 @@ use std::os::windows::fs::MetadataExt;
 /// This struct represents a virtual file on the system.
 /// It permits the program to store the file's name, size, full path and checksum properly.
 ///
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VirtualFile {
     pub name: String,
     pub size: u64,
     pub full_path: String,
     pub checksum: Option<HashMap<String, String>>,
 }
+
+impl VirtualFile {
+    /// This function is responsible for updating the checksum of the file.
+    /// It creates a HashMap if it doesn't exist and adds the hash and checksum to it.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - A string slice that holds the hash algorithm used.
+    /// * `checksum` - A string that holds the checksum of the file.
+    ///
+    pub fn update_checksum(&mut self, hash: &str, checksum: String) {
+        if let Some(ref mut map) = self.checksum {
+            map.insert(hash.to_string(), checksum);
+        } else {
+            let mut map: HashMap<String, String> = HashMap::new();
+            map.insert(hash.to_string(), checksum);
+            self.checksum = Some(map);
+        }
+    }
+
+    /// This function is responsible for getting the checksum of the file based on the hash algorithm.
+    /// It returns the checksum if it exists, None otherwise.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash` - A string slice that holds the hash algorithm used.
+    ///
+    /// # Returns
+    ///
+    /// An Option<String> that holds the checksum of the file.
+    ///
+    pub fn get_checksum(&self, hash: &str) -> Option<String> {
+        if let Some(ref map) = self.checksum {
+            if let Some(checksum) = map.get(hash) {
+                return Some(checksum.to_string());
+            }
+        }
+        None
+    }
+}
+
 
 /// This function is responsible for checking a path/filename.
 ///
@@ -101,7 +147,6 @@ pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
 
 /// This function is responsible for managing file hashing.
 /// It returns the checksum of the file, using the hash algorithm provided.
-/// If the hash algorithm is not supported, it returns an error.
 ///
 /// # Arguments
 ///
@@ -110,24 +155,24 @@ pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
 ///
 /// # Returns
 ///
-/// The hashed file, SystemError otherwise.
+/// The hashed file, or None if the hash algorithm is not supported.
 ///
-pub fn manage_hash(file: &str, hash: &str) -> Result<String, SystemError> {
+pub fn manage_hash(file: &str, hash: &str) -> Option<String> {
     match hash {
-        "md5" => Ok(hash_with_digest(Md5::new(), file)),
-        "sha1" => Ok(hash_with_digest(Sha1::new(), file)),
-        "sha224" => Ok(hash_with_digest(Sha224::new(), file)),
-        "sha256" => Ok(hash_with_digest(Sha256::new(), file)),
-        "sha384" => Ok(hash_with_digest(Sha384::new(), file)),
-        "sha512" => Ok(hash_with_digest(Sha512::new(), file)),
-        "sha3-224" => Ok(hash_with_digest(Sha3_224::new(), file)),
-        "sha3-256" => Ok(hash_with_digest(Sha3_256::new(), file)),
-        "sha3-384" => Ok(hash_with_digest(Sha3_384::new(), file)),
-        "sha3-512" => Ok(hash_with_digest(Sha3_512::new(), file)),
-        "blake2b-512" => Ok(hash_with_digest(Blake2b512::new(), file)),
-        "blake2s-256" => Ok(hash_with_digest(Blake2s256::new(), file)),
-        "whirlpool" => Ok(hash_with_digest(Whirlpool::new(), file)),
-        _ => Err(SystemError::UnsupportedHashAlgorithm(hash.to_string())),
+        "md5" => Some(hash_with_digest(Md5::new(), file)),
+        "sha1" => Some(hash_with_digest(Sha1::new(), file)),
+        "sha224" => Some(hash_with_digest(Sha224::new(), file)),
+        "sha256" => Some(hash_with_digest(Sha256::new(), file)),
+        "sha384" => Some(hash_with_digest(Sha384::new(), file)),
+        "sha512" => Some(hash_with_digest(Sha512::new(), file)),
+        "sha3-224" => Some(hash_with_digest(Sha3_224::new(), file)),
+        "sha3-256" => Some(hash_with_digest(Sha3_256::new(), file)),
+        "sha3-384" => Some(hash_with_digest(Sha3_384::new(), file)),
+        "sha3-512" => Some(hash_with_digest(Sha3_512::new(), file)),
+        "blake2b-512" => Some(hash_with_digest(Blake2b512::new(), file)),
+        "blake2s-256" => Some(hash_with_digest(Blake2s256::new(), file)),
+        "whirlpool" => Some(hash_with_digest(Whirlpool::new(), file)),
+        _ => None,
     }
 }
 
@@ -144,14 +189,16 @@ pub fn manage_hash(file: &str, hash: &str) -> Result<String, SystemError> {
 /// The hashed file.
 ///
 fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> String {
-    let input = File::open(path).unwrap();
-    let mut reader = BufReader::new(input);
+    let input: File = File::open(path).unwrap();
+    let mut reader: BufReader<File> = BufReader::new(input);
 
     let digest = {
-        let mut buffer = [0; 1024];
+        let mut buffer: [u8; 1024] = [0; 1024];
         loop {
-            let count = reader.read(&mut buffer).unwrap();
-            if count == 0 { break }
+            let count: usize = reader.read(&mut buffer).unwrap();
+            if count == 0 {
+                break;
+            }
             hasher.update(&buffer[..count]);
         }
         hasher.finalize()
@@ -194,19 +241,19 @@ const fn get_invalid_chars() -> &'static [char] {
 ///
 fn build_full_path(path: &str) -> Result<String, SystemError> {
     let full_path: String = if Path::new(path).is_absolute() {
-         path.to_string()
-     } else {
-         let current_dir: String = match std::env::current_dir() {
-             Ok(c) => match c.to_str() {
-                 Some(s) => s.to_string(),
-                 None => return Err(SystemError::InvalidPath(path.to_string())),
-             },
-             Err(e) => {
-                 return Err(SystemError::UnableToGetCurrentDir(e.to_string()));
-             }
-         };
-         current_dir + "/" + path.trim_start_matches("./")
-     };
+        path.to_string()
+    } else {
+        let current_dir: String = match std::env::current_dir() {
+            Ok(c) => match c.to_str() {
+                Some(s) => s.to_string(),
+                None => return Err(SystemError::InvalidPath(path.to_string())),
+            },
+            Err(e) => {
+                return Err(SystemError::UnableToGetCurrentDir(e.to_string()));
+            }
+        };
+        current_dir + "/" + path.trim_start_matches("./")
+    };
 
     Ok(full_path)
 }

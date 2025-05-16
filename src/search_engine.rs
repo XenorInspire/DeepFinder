@@ -88,6 +88,7 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
     Ok(files)
 }
 
+/// <!> ---------- Fix this function by using ArcMutex slice of virtual_files array. ---------- <!>
 /// This function is responsible for scheduling the hashing of files and the different threads.
 ///
 /// # Arguments
@@ -102,21 +103,53 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
 fn hash_handler(hash_algorithms: &[String], virtual_files: &mut [VirtualFile]) -> Result<(), DeepFinderError> {
     let num_cores: usize = num_cpus::get(); // Get the number of logical cores.
     let mut threads: Vec<JoinHandle<()>> = Vec::new();
-    let mut nb_of_files_per_thread: usize = virtual_files.len() / num_cores;
+    let nb_of_files_per_thread: usize = virtual_files.len() / num_cores;
     let nb_of_passwd_last_thread: usize = nb_of_files_per_thread + virtual_files.len() % num_cores;
 
     for hash_algorithm in hash_algorithms {
-        for _ in 0..num_cores {
-            
+        for i in 0..num_cores {
+            let idx_start: usize = i * nb_of_files_per_thread;
+            let idx_end: usize = if i == num_cores - 1 {
+                idx_start + nb_of_passwd_last_thread
+            } else {
+                idx_start + nb_of_files_per_thread
+            };
+
+            let mut files_to_hash: Vec<VirtualFile> = virtual_files.to_vec();
+            let hash_algorithm: String = hash_algorithm.clone();
+
+            threads.push(std::thread::spawn(move || {
+                calculate_hash(&hash_algorithm, &mut files_to_hash, idx_start, idx_end);
+            }));
         }
+    }
+
+    for thread in threads {
+        thread.join().map_err(|_| DeepFinderError::SystemError(SystemError::ThreadError))?;
     }
 
     Ok(())
 }
 
+/// <!> ---------- Delete index to parse the entire slice ---------- <!>
+/// This function is responsible for calculating the hash of files.
+///
+/// # Arguments
+/// 
+/// * `hash_algorithm` - A string slice that holds the hash algorithm to use.
+/// * `files_to_hash` - A mutable reference to a slice of VirtualFile.
+/// * `idx_start` - The starting index of the files to hash.
+/// * `idx_end` - The ending index of the files to hash.
+/// 
+/// # Returns
+/// 
+/// A vector of strings with the files found in the directory, SystemError otherwise.
+/// 
 fn calculate_hash(hash_algorithm: &str, files_to_hash: &mut [VirtualFile], idx_start: usize, idx_end: usize) {
-    for i in idx_start..=idx_end {
-        let hash: String = system::manage_hash(&files_to_hash[i].full_path, hash_algorithm).unwrap();
-        // call virtualFile method to update checksum array
+    for file in files_to_hash.iter_mut().take(idx_end + 1).skip(idx_start) {
+        if let Some(hash) = system::manage_hash(&file.full_path, hash_algorithm) {
+            println!("Hashing {} with {}...", hash, hash_algorithm);
+            file.update_checksum(hash_algorithm, hash);
+        }
     }
 }
