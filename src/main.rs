@@ -16,7 +16,7 @@ use std::process;
 ///
 fn main() {
     if let Err(e) = run_search() {
-        eprintln!("{}", e);
+        eprintln!("{e}");
         process::exit(1);
     }
 

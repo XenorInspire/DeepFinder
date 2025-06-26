@@ -72,10 +72,10 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
 
         if index == 0 {
             if path.is_dir() {
-                files.extend(search_files(&format!("{}/{}", dir, name), include_hidden_files)?);
+                files.extend(search_files(&format!("{dir}/{name}"), include_hidden_files)?);
             }
         } else if path.is_dir() {
-            files.extend(search_files(&format!("{}/{}", dir, name), include_hidden_files)?);
+            files.extend(search_files(&format!("{dir}/{name}"), include_hidden_files)?);
         }
     }
 

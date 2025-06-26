@@ -30,8 +30,8 @@ pub enum SystemError {
 impl fmt::Display for DeepFinderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::ArgError(e) => write!(f, "{}", e),
-            Self::SystemError(e) => write!(f, "{}", e),
+            Self::ArgError(e) => write!(f, "{e}"),
+            Self::SystemError(e) => write!(f, "{e}"),
         }
     }
 }
@@ -48,15 +48,15 @@ impl fmt::Display for ArgError {
 impl fmt::Display for SystemError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::InvalidFolder(p) => write!(f, "Error: invalid folder specified '{}'.\nThis folder may not exist.\nUsage: deefinder <path> [options]\nTry 'deefinder --help' for more information.", p),
-            Self::InvalidPath(p) => write!(f, "Error: invalid path '{}'", p),
-            Self::InvalidFilename(file) => write!(f, "Error: invalid filename '{}'", file),
-            Self::UnableToCreateFile(p, e) => write!(f, "Error: unable to create file '{}': {}", p, e),
+            Self::InvalidFolder(p) => write!(f, "Error: invalid folder specified '{p}'.\nThis folder may not exist.\nUsage: deefinder <path> [options]\nTry 'deefinder --help' for more information."),
+            Self::InvalidPath(p) => write!(f, "Error: invalid path '{p}'"),
+            Self::InvalidFilename(file) => write!(f, "Error: invalid filename '{file}'"),
+            Self::UnableToCreateFile(p, e) => write!(f, "Error: unable to create file '{p}': {e}"),
             #[cfg(target_family = "windows")]
-            Self::PathTooLong(p) => write!(f, "Error: path too long '{}'", p),
-            Self::ParentFolderDoesntExist(p) => write!(f, "Error: parent folder doesn't exist '{}'", p),
-            Self::UnableToReadDir(p) => write!(f, "Error: unable to read directory '{}'", p),
-            Self::UnableToGetCurrentDir(e) => write!(f, "Error: unable to get current directory.\n{}", e),
+            Self::PathTooLong(p) => write!(f, "Error: path too long '{p}'"),
+            Self::ParentFolderDoesntExist(p) => write!(f, "Error: parent folder doesn't exist '{p}'"),
+            Self::UnableToReadDir(p) => write!(f, "Error: unable to read directory '{p}'"),
+            Self::UnableToGetCurrentDir(e) => write!(f, "Error: unable to get current directory.\n{e}"),
             Self::ThreadError => write!(f, "Error: thread error"),
         }
     }
