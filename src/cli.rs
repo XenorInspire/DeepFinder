@@ -12,7 +12,7 @@ use std::process::exit;
 ///
 #[derive(PartialEq, Debug)]
 pub struct FindingConfig {
-    pub path: String,
+    pub search_path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
     pub hash: Option<Vec<String>>,
@@ -244,7 +244,7 @@ pub fn run() -> Result<FindingConfig, DeepFinderError> {
 /// Ok(FindingConfig) if the user's choices are valid, DeepFinderError otherwise.
 ///
 fn parse_user_choices(matches: &ArgMatches) -> Result<FindingConfig, DeepFinderError> {
-    let path: String = matches
+    let search_path: String = matches
         .get_one::<String>("path")
         .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
         .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?;
@@ -271,7 +271,7 @@ fn parse_user_choices(matches: &ArgMatches) -> Result<FindingConfig, DeepFinderE
     };
 
     Ok(FindingConfig {
-        path,
+        search_path,
         enable_search_by_name: matches.get_flag("name") || !matches.contains_id("hash_algorithm"),
         include_hidden_files: matches.get_flag("hidden_files"),
         hash,
@@ -305,21 +305,21 @@ mod tests {
         let command_context: Command = build_command_context();
 
         // Set different settings for Unix and Windows.
-        let path: String;
+        let search_path: String;
         let matches: ArgMatches;
         let output: CliOutput;
         if cfg!(target_family = "unix") {
-            path = "/tmp".to_string();
+            search_path = "/tmp".to_string();
             matches = command_context.clone().get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-C", "/tmp/output.csv"]);
             output = CliOutput::CsvFile("/tmp/output.csv".to_string());
         } else {
-            path = "C:\\Windows\\".to_string();
+            search_path = "C:\\Windows\\".to_string();
             matches = command_context.clone().get_matches_from(vec!["deepfinder", "C:\\Windows\\", "-a", "md5,sha256", "-f", "-n", "-C", "C:\\output.csv"]);
             output = CliOutput::CsvFile("C:\\output.csv".to_string());
         };
 
         let expected: FindingConfig = FindingConfig {
-            path,
+            search_path,
             enable_search_by_name: true,
             include_hidden_files: true,
             hash: Some(vec!["md5".to_string(), "sha256".to_string()]),

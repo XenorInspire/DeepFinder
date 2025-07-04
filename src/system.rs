@@ -51,28 +51,7 @@ impl VirtualFile {
             self.checksum = Some(map);
         }
     }
-
-    /// This function is responsible for getting the checksum of the file based on the hash algorithm.
-    /// It returns the checksum if it exists, None otherwise.
-    ///
-    /// # Arguments
-    ///
-    /// * `hash` - A string slice that holds the hash algorithm used.
-    ///
-    /// # Returns
-    ///
-    /// An Option<String> that holds the checksum of the file.
-    ///
-    pub fn get_checksum(&self, hash: &str) -> Option<String> {
-        if let Some(ref map) = self.checksum {
-            if let Some(checksum) = map.get(hash) {
-                return Some(checksum.to_string());
-            }
-        }
-        None
-    }
 }
-
 
 /// This function is responsible for checking a path/filename.
 ///
