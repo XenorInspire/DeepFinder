@@ -78,18 +78,28 @@ Usage: deepfinder <path> [options]
 Options:
   -n, --name                            Find the duplicates by their name.
                                         Selected by default if both -n and -a arguments are not specified.
+
   -a, --hash-algorithm                  Find the duplicates from the hash.
                                         It can be used to compare the content of the files.
                                         You can choose between: md5, sha1, sha224, sha256, sha384, sha512,
                                         sha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.
+                                        
   -f, --hidden-files                    Enable search for hidden files.
+  
   -c <path>, --csv-display              Export the results to stdin in a CSV format.
+  
   -C <path>, --csv-output <path>        Export the results in a CSV file.
+  
   -j <path>, --json-display             Export the results to stdin in a JSON format.
+  
   -J <path>, --json-output <path>       Export the results in a JSON file.
+  
   -x <path>, --xml-display              Export the results to stdin in a XML format.
+  
   -X <path>, --xml-output <path>        Export the results in a XML file.
+  
   -v, --version                         Display the version of DeepFinder.
+  
   -h, --help                            Display this help message.
 
 ```
