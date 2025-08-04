@@ -195,7 +195,7 @@ fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingCon
             continue;
         };
 
-        let entry = map.entry(key).or_insert_with(|| DuplicateFile {
+        let entry: &mut DuplicateFile = map.entry(key).or_insert_with(|| DuplicateFile {
             paths: HashSet::new(),
             name: file.name.clone(),
             checksums: file.checksums.clone(),
