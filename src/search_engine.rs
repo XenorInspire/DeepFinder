@@ -8,7 +8,8 @@ use crate::{
 // External crates.
 use std::{
     collections::{HashMap, HashSet},
-    fs,
+    fs::{self, File},
+    io::Write,
     thread::{self, JoinHandle},
 };
 
@@ -38,8 +39,19 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     if let Some(hash_algorithms) = &config.hash {
         hash_handler(hash_algorithms, &mut virtual_files)?;
     }
-    
-    println!("\n{:?} - {} files", virtual_files[0], virtual_files.len());
+
+    let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&virtual_files, config);
+
+    // Save the results in a temp file (WIP).
+    let mut file: File = File::create_new("deepfinder_results.txt").unwrap();
+    for d in &duplicates {
+        writeln!(file, "Name: {}, Size: {}, Paths: {:?}, Occurrences: {}", d.name, d.size, d.paths, d.nb_occurrences).unwrap();
+        if let Some(checksums) = &d.checksums {
+            writeln!(file, "Checksums: {checksums:?}").unwrap();
+        }
+    }
+
+    println!("\n{} files", virtual_files.len());
     Ok(())
 }
 
@@ -124,16 +136,35 @@ fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>
             let start: usize = i * chunk_size;
             let end: usize = ((i + 1) * chunk_size).min(virtual_files.len());
 
+            // We can break the loop because there are no more files to process.
+            if start >= end {
+                break;
+            }
+
             let mut chunk_files: Vec<VirtualFile> = virtual_files[start..end].to_vec();
             threads.push(thread::spawn(move || {
-                calculate_hash(&hash_algorithm, &mut chunk_files);
+                for file in &mut chunk_files {
+                    if let Some(hash) = system::manage_hash(&file.full_path, &hash_algorithm) {
+                        file.update_checksum(&hash_algorithm, hash);
+                    }
+                }
                 chunk_files // Return the processed chunk.
             }));
         }
 
         for thread in threads {
             let chunk: Vec<VirtualFile> = thread.join().map_err(|_| DeepFinderError::SystemError(SystemError::ThreadError))?;
-            updated_files.extend(chunk);
+            for file in chunk {
+                if let Some(existing_file) = updated_files.iter_mut().find(|f| f.full_path == file.full_path) {
+                    // If the file already exists, update its checksums.
+                    if let Some(checksums) = &file.checksums {
+                        existing_file.update_checksum(hash_algorithm, checksums.get(hash_algorithm.as_str()).cloned().unwrap_or_default());
+                    }
+                } else {
+                    // Otherwise, add the new file to the updated files.
+                    updated_files.push(file);
+                }
+            }
         }
     }
 
@@ -141,52 +172,40 @@ fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>
     Ok(())
 }
 
-/// This function is responsible for calculating the hash of files.
+/// This function is responsible for searching eventual duplicates in the virtual files.
 ///
 /// # Arguments
-/// 
-/// * `hash_algorithm` - A string slice that holds the hash algorithm to use.
-/// * `files_to_hash` - A mutable reference to a slice of VirtualFile.
-/// 
+///
+/// * `virtual_files` - A slice of VirtualFile.
+/// * `config` - A reference to the FindingConfig struct with the user's configuration.
+///
 /// # Returns
-/// 
-/// A vector of strings with the files found in the directory, SystemError otherwise.
-/// 
-fn calculate_hash(hash_algorithm: &str, files_to_hash: &mut [VirtualFile]) {
-    for file in files_to_hash.iter_mut() {
-        if let Some(hash) = system::manage_hash(&file.full_path, hash_algorithm) {
-            file.update_checksum(hash_algorithm, hash);
-        }
-    }
-}
-
+///
+/// A vector of DuplicateFile containing the duplicates found.
+///
 fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingConfig) -> Vec<DuplicateFile> {
-    let mut duplicates: Vec<DuplicateFile> = Vec::new();
+    let mut map: HashMap<String, DuplicateFile> = HashMap::new();
 
-    for file in virtual_files.iter() {
-        let mut duplicate_file = DuplicateFile {
-            paths: HashSet::new(),
-            name: file.name.clone(),
-            checksums: file.checksum.clone(),
-            nb_occurrences: 0,
-            size: file.size,
+    for file in virtual_files {
+        let key: String = if config.enable_search_by_name {
+            file.name.clone()
+        } else if let Some(checksums) = &file.checksums {
+            checksums.iter().map(|(k, v)| format!("{k}:{v}")).collect::<Vec<_>>().join("|")
+        } else {
+            continue;
         };
 
-        duplicate_file.paths.insert(file.full_path.clone());
-        duplicate_file.nb_occurrences += 1;
+        let entry = map.entry(key).or_insert_with(|| DuplicateFile {
+            paths: HashSet::new(),
+            name: file.name.clone(),
+            checksums: file.checksums.clone(),
+            nb_occurrences: 0,
+            size: file.size,
+        });
 
-        if let Some(checksums) = &file.checksum {
-            if !checksums.is_empty() {
-                // Check if the file is already in the duplicates list.
-                if let Some(existing) = duplicates.iter_mut().find(|d| d.name == duplicate_file.name && d.checksums == duplicate_file.checksums) {
-                    existing.paths.extend(duplicate_file.paths);
-                    existing.nb_occurrences += duplicate_file.nb_occurrences;
-                } else {
-                    duplicates.push(duplicate_file);
-                }
-            }
-        }
+        entry.paths.insert(file.full_path.clone());
+        entry.nb_occurrences += 1;
     }
 
-    duplicates
+    map.into_values().collect()
 }

@@ -30,7 +30,7 @@ pub struct VirtualFile {
     pub name: String,
     pub size: u64,
     pub full_path: String,
-    pub checksum: Option<HashMap<String, String>>,
+    pub checksums: Option<HashMap<String, String>>,
 }
 
 impl VirtualFile {
@@ -43,12 +43,12 @@ impl VirtualFile {
     /// * `checksum` - A string that holds the checksum of the file.
     ///
     pub fn update_checksum(&mut self, hash: &str, checksum: String) {
-        if let Some(ref mut map) = self.checksum {
+        if let Some(ref mut map) = self.checksums {
             map.insert(hash.to_string(), checksum);
         } else {
             let mut map: HashMap<String, String> = HashMap::new();
             map.insert(hash.to_string(), checksum);
-            self.checksum = Some(map);
+            self.checksums = Some(map);
         }
     }
 }
@@ -257,7 +257,7 @@ pub fn build_virtual_files(file_paths: &Vec<String>) -> Vec<VirtualFile> {
             },
             size: get_file_size(path),
             full_path: path.to_string(),
-            checksum: None,
+            checksums: None,
         };
         virtual_files.push(file);
     }
@@ -358,8 +358,8 @@ mod tests {
         assert_eq!(virtual_files.len(), 2);
         assert_eq!(virtual_files[0].name, "test1.txt");
         assert_eq!(virtual_files[1].name, "test2.txt");
-        assert_eq!(virtual_files[0].checksum, None);
-        assert_eq!(virtual_files[1].checksum, None);
+        assert_eq!(virtual_files[0].checksums, None);
+        assert_eq!(virtual_files[1].checksums, None);
         assert_eq!(virtual_files[0].size, 0);
         assert_eq!(virtual_files[1].size, 0);
         assert_eq!(virtual_files[0].full_path, "/test1/test1.txt");
