@@ -195,16 +195,16 @@ fn build_command_context() -> Command {
 fn display_help() {
     println!("Usage: deepfinder <path> [options]");
     println!("Options:");
-    println!("  -n, --name\t\t\t\tFind the duplicates by their name.\n\t\t\t\t\tSelected by default if both -n and -a arguments are not specified.");
-    println!("  -a, --hash-algorithm\t\t\tFind the duplicates from the hash.\n\t\t\t\t\tIt can be used to compare the content of the files.\n\t\t\t\t\tYou can choose between: md5, sha1, sha224, sha256, sha384, sha512,\n\t\t\t\t\tsha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.");
-    println!("  -f, --hidden-files\t\t\tEnable search for hidden files.");
-    println!("  -c <path>, --csv-display\t\tExport the results to stdin in a CSV format.");
-    println!("  -C <path>, --csv-output <path>\tExport the results in a CSV file.");
-    println!("  -j <path>, --json-display\t\tExport the results to stdin in a JSON format.");
-    println!("  -J <path>, --json-output <path>\tExport the results in a JSON file.");
-    println!("  -x <path>, --xml-display\t\tExport the results to stdin in a XML format.");
-    println!("  -X <path>, --xml-output <path>\tExport the results in a XML file.");
-    println!("  -v, --version\t\t\t\tDisplay the version of DeepFinder.");
+    println!("  -n, --name\t\t\t\tFind the duplicates by their name (faster option).\n\t\t\t\t\tSelected by default if both -n and -a arguments are not specified.\n");
+    println!("  -a, --hash-algorithm\t\t\tFind the duplicates based on file content (slower option).\n\t\t\t\t\tIt can be used to compare the content of the files.\n\t\t\t\t\tYou can choose between: md5, sha1, sha224, sha256, sha384, sha512,\n\t\t\t\t\tsha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.\n");
+    println!("  -f, --hidden-files\t\t\tEnable search for hidden files.\n");
+    println!("  -c <path>, --csv-display\t\tExport the results to stdin in a CSV format.\n");
+    println!("  -C <path>, --csv-output <path>\tExport the results in a CSV file.\n");
+    println!("  -j <path>, --json-display\t\tExport the results to stdin in a JSON format.\n");
+    println!("  -J <path>, --json-output <path>\tExport the results in a JSON file.\n");
+    println!("  -x <path>, --xml-display\t\tExport the results to stdin in a XML format.\n");
+    println!("  -X <path>, --xml-output <path>\tExport the results in a XML file.\n ");
+    println!("  -v, --version\t\t\t\tDisplay the version of DeepFinder.\n");
     println!("  -h, --help\t\t\t\tDisplay this help message.\n\n");
 }
 
