@@ -10,7 +10,7 @@ use std::process::exit;
 
 /// This struct is built from the values/choices of the user.
 ///
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub struct FindingConfig {
     pub search_path: String,
     pub enable_search_by_name: bool,
@@ -22,7 +22,7 @@ pub struct FindingConfig {
 /// This enum is used to determine the output format of the program.
 /// If no output format is specified, the program will display the results in STDIN, in a raw format.
 /// 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum CliOutput {
     Standard,
     CsvStdin,
@@ -39,6 +39,7 @@ pub enum CliOutput {
 ///
 /// Command containing the different features of DeepFinder.
 ///
+#[allow(clippy::too_many_lines)]
 fn build_command_context() -> Command {
     Command::new("deepfinder")
         .arg_required_else_help(true)
