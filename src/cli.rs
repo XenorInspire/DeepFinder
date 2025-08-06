@@ -311,15 +311,14 @@ mod tests {
         // Set different settings for Unix and Windows.
         let search_path: String;
         let matches: ArgMatches;
-        let output: CliOutput;
-        if cfg!(target_family = "unix") {
+        let output: CliOutput = if cfg!(target_family = "unix") {
             search_path = "/tmp".to_string();
             matches = command_context.clone().get_matches_from(vec!["deepfinder", "/tmp", "-a", "md5,sha256", "-f", "-n", "-C", "/tmp/output.csv"]);
-            output = CliOutput::CsvFile("/tmp/output.csv".to_string());
+            CliOutput::CsvFile("/tmp/output.csv".to_string())
         } else {
             search_path = "C:\\Windows\\".to_string();
             matches = command_context.clone().get_matches_from(vec!["deepfinder", "C:\\Windows\\", "-a", "md5,sha256", "-f", "-n", "-C", "C:\\output.csv"]);
-            output = CliOutput::CsvFile("C:\\output.csv".to_string());
+            CliOutput::CsvFile("C:\\output.csv".to_string())
         };
 
         let expected: FindingConfig = FindingConfig {
