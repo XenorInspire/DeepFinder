@@ -80,7 +80,8 @@ fn build_command_context() -> Command {
                     "whirlpool",
                 ])
                 .help("Allow duplicate finding by one or multiple hash algorithms")
-                .value_name("hash"),
+                .value_name("hash")
+                .num_args(1..),
         )
         .arg(
             Arg::new("hidden_files")
@@ -248,7 +249,9 @@ fn parse_user_choices(matches: &ArgMatches) -> Result<FindingConfig, DeepFinderE
     let search_path: String = matches
         .get_one::<String>("path")
         .ok_or(DeepFinderError::ArgError(ArgError::NoPathSpecified))
-        .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?;
+        .and_then(|path| system::is_valid_folder_path(path).map_err(DeepFinderError::SystemError))?
+        .trim_end_matches(['/', '\\'])
+        .to_string();
 
     let hash: Option<Vec<String>> = matches
         .get_many::<String>("hash_algorithm")
