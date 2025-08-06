@@ -2,14 +2,14 @@
 use crate::{
     cli::FindingConfig,
     error::{DeepFinderError, SystemError},
+    export::export_findings_scheduler,
     system::{self, VirtualFile, build_virtual_files},
 };
 
 // External crates.
 use std::{
     collections::{HashMap, HashSet},
-    fs::{self, File},
-    io::Write,
+    fs,
     thread::{self, JoinHandle},
 };
 
@@ -41,18 +41,8 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     }
 
     let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&virtual_files, config);
+    export_findings_scheduler(duplicates, config)
 
-    // Save the results in a temp file (WIP).
-    let mut file: File = File::create_new("deepfinder_results.txt").unwrap();
-    for d in &duplicates {
-        writeln!(file, "Name: {}, Size: {}, Paths: {:?}, Occurrences: {}", d.name, d.size, d.paths, d.nb_occurrences).unwrap();
-        if let Some(checksums) = &d.checksums {
-            writeln!(file, "Checksums: {checksums:?}").unwrap();
-        }
-    }
-
-    println!("\n{} files", virtual_files.len());
-    Ok(())
 }
 
 /// This function is responsible for searching files in a directory.
