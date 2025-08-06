@@ -207,5 +207,8 @@ fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingCon
         entry.nb_occurrences += 1;
     }
 
+    // Filter out entries with only one occurrence.
+    map.retain(|_, v| v.nb_occurrences > 1);
+    // Convert the map values into a vector.
     map.into_values().collect()
 }
