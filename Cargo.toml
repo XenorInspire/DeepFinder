@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["Xen0rInspire"]
 license = "MIT"
 description = "A low level Rust tool to find duplicates in large directories."
+keywords = ["deepfinder", "duplicate", "finder", "hash", "file", "directory"]
 
 [dependencies]
 clap = { version = "4.5.43", features = ["std"], default-features = false }
