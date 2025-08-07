@@ -61,11 +61,10 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
         .map_err(|e| SystemError::UnableToReadDir(e.to_string()))?
         .filter_map(|entry| entry.ok().map(|e| e.path()))
         .filter(|path| {
-            if !include_hidden_files {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if !include_hidden_files
+                && let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                     return !name.starts_with('.');
                 }
-            }
             true
         })
         .collect();
