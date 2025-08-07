@@ -138,19 +138,19 @@ pub fn is_valid_folder_path(path: &str) -> Result<String, SystemError> {
 ///
 pub fn manage_hash(file: &str, hash: &str) -> Option<String> {
     match hash {
-        "md5" => Some(hash_with_digest(Md5::new(), file)),
-        "sha1" => Some(hash_with_digest(Sha1::new(), file)),
-        "sha224" => Some(hash_with_digest(Sha224::new(), file)),
-        "sha256" => Some(hash_with_digest(Sha256::new(), file)),
-        "sha384" => Some(hash_with_digest(Sha384::new(), file)),
-        "sha512" => Some(hash_with_digest(Sha512::new(), file)),
-        "sha3-224" => Some(hash_with_digest(Sha3_224::new(), file)),
-        "sha3-256" => Some(hash_with_digest(Sha3_256::new(), file)),
-        "sha3-384" => Some(hash_with_digest(Sha3_384::new(), file)),
-        "sha3-512" => Some(hash_with_digest(Sha3_512::new(), file)),
-        "blake2b-512" => Some(hash_with_digest(Blake2b512::new(), file)),
-        "blake2s-256" => Some(hash_with_digest(Blake2s256::new(), file)),
-        "whirlpool" => Some(hash_with_digest(Whirlpool::new(), file)),
+        "md5" => hash_with_digest(Md5::new(), file),
+        "sha1" => hash_with_digest(Sha1::new(), file),
+        "sha224" => hash_with_digest(Sha224::new(), file),
+        "sha256" => hash_with_digest(Sha256::new(), file),
+        "sha384" => hash_with_digest(Sha384::new(), file),
+        "sha512" => hash_with_digest(Sha512::new(), file),
+        "sha3-224" => hash_with_digest(Sha3_224::new(), file),
+        "sha3-256" => hash_with_digest(Sha3_256::new(), file),
+        "sha3-384" => hash_with_digest(Sha3_384::new(), file),
+        "sha3-512" => hash_with_digest(Sha3_512::new(), file),
+        "blake2b-512" => hash_with_digest(Blake2b512::new(), file),
+        "blake2s-256" => hash_with_digest(Blake2s256::new(), file),
+        "whirlpool" => hash_with_digest(Whirlpool::new(), file),
         _ => None,
     }
 }
@@ -165,10 +165,10 @@ pub fn manage_hash(file: &str, hash: &str) -> Option<String> {
 ///
 /// # Returns
 ///
-/// The hashed file.
+/// The file hash as a hexadecimal string, or None if the file cannot be read.
 ///
-fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> String {
-    let input: File = File::open(path).unwrap();
+fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> Option<String> {
+    let input: File = File::open(path).ok()?;
     let mut reader: BufReader<File> = BufReader::new(input);
 
     let digest = {
@@ -183,7 +183,7 @@ fn hash_with_digest<D: Digest>(mut hasher: D, path: &str) -> String {
         hasher.finalize()
     };
 
-    hex::encode(digest)
+    Some(hex::encode(digest))
 }
 
 /// This function sends the invalid chars for windows platforms.
