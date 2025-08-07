@@ -1,5 +1,14 @@
 // Internal crates.
-use crate::{cli::{CliOutput, FindingConfig}, error::DeepFinderError, search_engine::DuplicateFile};
+use crate::{
+    cli::{CliOutput, FindingConfig},
+    error::{DeepFinderError, SystemError},
+    search_engine::DuplicateFile,
+};
+
+// External crates.
+use csv::WriterBuilder;
+use serde::Serialize;
+use std::fs;
 
 /// This function is the scheduler for exporting findings.
 ///
@@ -13,18 +22,14 @@ use crate::{cli::{CliOutput, FindingConfig}, error::DeepFinderError, search_engi
 /// The result of the export findings scheduler, DeepFinderError otherwise.
 ///
 pub fn export_findings_scheduler(duplicates: Vec<DuplicateFile>, config: &FindingConfig) -> Result<(), DeepFinderError> {
-    match config.output {
-        CliOutput::Standard => {
-            simple_display(duplicates);
-            Ok(())
-        },
-        // CliOutput::JsonStdin => json_display(duplicates, None),
-        // CliOutput::CsvStdin => csv_display(duplicates, None),
-        // CliOutput::XmlStdin => xml_display(duplicates, None),
-        // CliOutput::JsonFile(path) => json_display(duplicates, Some(path)),
-        // CliOutput::CsvFile(path) => csv_display(duplicates, Some(path)),
-        // CliOutput::XmlFile(path) => xml_display(duplicates, Some(path)),
-        _ => Ok(()),
+    match &config.output {
+        CliOutput::Standard => { simple_display(duplicates); Ok(()) },
+        CliOutput::JsonStdin => json_display(duplicates, None),
+        CliOutput::CsvStdin => csv_display(duplicates, None),
+        CliOutput::XmlStdin => xml_display(duplicates, None),
+        CliOutput::JsonFile(path) => json_display(duplicates, Some(path)),
+        CliOutput::CsvFile(path) => csv_display(duplicates, Some(path)),
+        CliOutput::XmlFile(path) => xml_display(duplicates, Some(path)),
     }
 }
 
@@ -33,10 +38,6 @@ pub fn export_findings_scheduler(duplicates: Vec<DuplicateFile>, config: &Findin
 /// # Arguments
 ///
 /// * `duplicates` - A vector of DuplicateFile containing the findings.
-///
-/// # Returns
-///
-/// Result<(), DeepFinderError> - Returns Ok if the display is successful, DeepFinderError otherwise.
 ///
 fn simple_display(duplicates: Vec<DuplicateFile>) {
     if duplicates.is_empty() {
@@ -58,4 +59,103 @@ fn simple_display(duplicates: Vec<DuplicateFile>) {
         }
         println!();
     }
+}
+
+/// This function displays the findings in JSON format.
+///
+/// # Arguments
+///
+/// * `duplicates` - A vector of DuplicateFile containing the findings.
+/// * `path` - An optional path to save the JSON output.
+///
+/// # Returns
+///
+/// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
+///
+fn json_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(), DeepFinderError> {
+    let json_data: String = serde_json::to_string(&duplicates)
+        .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("json".to_string(), e.to_string())))?;
+    
+    if let Some(file_path) = path {
+        fs::write(file_path, json_data)
+            .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToCreateFile(file_path.to_string(), e.to_string())))?;
+    } else {
+        println!("{}", json_data);
+    }
+
+    Ok(())
+}
+
+/// This function displays the findings in CSV format.
+///
+/// # Arguments
+///
+/// * `duplicates` - A vector of DuplicateFile containing the findings.
+/// * `path` - An optional path to save the CSV output.
+///
+/// # Returns
+///
+/// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
+///
+fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(), DeepFinderError> {
+    let mut wtr = WriterBuilder::new().delimiter(b';').from_writer(vec![]);
+    wtr.write_record(["Name", "Paths", "Occurrences", "Size", "Checksums"])
+        .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
+    for file in duplicates {
+        wtr.write_record(&[
+            file.name,
+            file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
+            file.nb_occurrences.to_string(),
+            file.size.to_string(),
+            file.checksums.as_ref().map_or("N/A".to_string(), |checksums| {
+                checksums.iter()
+                    .map(|(algo, checksum)| format!("{algo}:{checksum}"))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            }),
+        ]).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
+    }
+    let csv_data: String = String::from_utf8(wtr.into_inner().unwrap_or_default())
+        .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
+
+    if let Some(file_path) = path {
+        fs::write(file_path, csv_data)
+            .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToCreateFile(file_path.to_string(), e.to_string())))?;
+    } else {
+        println!("{}", csv_data);
+    }
+
+    Ok(())
+}
+/// This function displays the findings in XML format.
+///
+/// # Arguments
+///
+/// * `duplicates` - A vector of DuplicateFile containing the findings.
+/// * `path` - An optional path to save the XML output.
+///
+/// # Returns
+///
+/// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
+///
+fn xml_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(), DeepFinderError> {
+    #[derive(Serialize)]
+    #[serde(rename = "duplicate_files")]
+    struct DuplicateFilesWrapper {
+        #[serde(rename = "duplicate_file")]
+        files: Vec<DuplicateFile>,
+    }
+
+    let wrapper: DuplicateFilesWrapper = DuplicateFilesWrapper { files: duplicates };
+    let xml_data: String = serde_xml_rs::to_string(&wrapper)
+        .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("xml".to_string(), e.to_string())))?;
+    
+    if let Some(file_path) = path {
+        fs::write(file_path, xml_data)
+            .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToCreateFile(file_path.to_string(), e.to_string())))?;
+    } else {
+        println!("{}", xml_data);
+    }
+
+    Ok(())
 }

@@ -7,13 +7,14 @@ use crate::{
 };
 
 // External crates.
+use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
     fs,
     thread::{self, JoinHandle},
 };
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Serialize)]
 pub struct DuplicateFile {
     pub paths: HashSet<String>,
     pub name: String,

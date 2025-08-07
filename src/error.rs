@@ -18,6 +18,7 @@ pub enum SystemError {
     InvalidPath(String),
     InvalidFilename(String),
     UnableToCreateFile(String, String),
+    UnableToSerialize(String, String),
     #[cfg(target_family = "windows")]
     PathTooLong(String),
     ParentFolderDoesntExist(String),
@@ -52,6 +53,7 @@ impl fmt::Display for SystemError {
             Self::InvalidPath(p) => write!(f, "Error: invalid path '{p}'"),
             Self::InvalidFilename(file) => write!(f, "Error: invalid filename '{file}'"),
             Self::UnableToCreateFile(p, e) => write!(f, "Error: unable to create file '{p}': {e}"),
+            Self::UnableToSerialize(format, e) => write!(f, "Error: unable to serialize data to '{format}' format: {e}"),
             #[cfg(target_family = "windows")]
             Self::PathTooLong(p) => write!(f, "Error: path too long '{p}'"),
             Self::ParentFolderDoesntExist(p) => write!(f, "Error: parent folder doesn't exist '{p}'"),
