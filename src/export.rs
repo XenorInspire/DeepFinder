@@ -128,6 +128,7 @@ fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(),
 
     Ok(())
 }
+
 /// This function displays the findings in XML format.
 ///
 /// # Arguments
