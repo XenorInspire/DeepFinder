@@ -214,7 +214,7 @@ const fn get_invalid_chars() -> &'static [char] {
 ///
 /// * `path` - A string slice that holds the path to build.
 ///
-/// Returns
+/// # Returns
 ///
 /// A string containing the full path. DeepFinderError if the path is invalid or it can't get the current directory.
 ///
@@ -239,11 +239,11 @@ fn build_full_path(path: &str) -> Result<String, SystemError> {
 
 /// This function is responsible for building virtual files from a list of file paths.
 ///
-/// Arguments
+/// # Arguments
 ///
 /// * `file_paths` - A vector of strings that holds the file paths.
 ///
-/// Returns
+/// # Returns
 ///
 /// A vector of VirtualFile structs. Empty if no paths are provided.
 ///
