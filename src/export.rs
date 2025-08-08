@@ -177,7 +177,6 @@ mod tests {
                 checksums: None,
             }
         ];
-        // On vérifie simplement que la fonction ne retourne pas d'erreur
         assert!(json_display(duplicates.clone(), None).is_ok());
     }
 
