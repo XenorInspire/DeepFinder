@@ -98,7 +98,7 @@ fn json_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<()
 /// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
 ///
 fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(), DeepFinderError> {
-    let mut wtr = WriterBuilder::new().delimiter(b';').from_writer(vec![]);
+    let mut wtr: csv::Writer<Vec<u8>> = WriterBuilder::new().delimiter(b';').from_writer(vec![]);
     wtr.write_record(["Name", "Paths", "Occurrences", "Size", "Checksums"])
         .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
     for file in duplicates {
@@ -115,6 +115,7 @@ fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(),
             }),
         ]).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
     }
+    
     let csv_data: String = String::from_utf8(wtr.into_inner().unwrap_or_default())
         .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
 
@@ -158,4 +159,112 @@ fn xml_display(duplicates: Vec<DuplicateFile>, path: Option<&str>) -> Result<(),
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_json_display_to_stdout() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file1.txt".to_string(),
+                paths: ["path1".to_string(), "path2".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 123,
+                checksums: None,
+            }
+        ];
+        // On vérifie simplement que la fonction ne retourne pas d'erreur
+        assert!(json_display(duplicates.clone(), None).is_ok());
+    }
+
+    #[test]
+    fn test_json_display_to_file() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file2.txt".to_string(),
+                paths: ["pathA".to_string(), "pathB".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 456,
+                checksums: None,
+            }
+        ];
+        let test_path: &'static str = "test_output.json";
+        assert!(json_display(duplicates.clone(), Some(test_path)).is_ok());
+
+        let content: String = fs::read_to_string(test_path).expect("File should exist");
+        assert!(content.contains("file2.txt"));
+        let _ = fs::remove_file(test_path);
+    }
+
+    #[test]
+    fn test_csv_display_to_stdout() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file1.txt".to_string(),
+                paths: ["path1".to_string(), "path2".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 123,
+                checksums: None,
+            }
+        ];
+        assert!(csv_display(duplicates.clone(), None).is_ok());
+    }
+
+    #[test]
+    fn test_csv_display_to_file() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file2.txt".to_string(),
+                paths: ["pathA".to_string(), "pathB".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 456,
+                checksums: None,
+            }
+        ];
+        
+        let test_path: &'static str = "test_output.csv";
+        assert!(csv_display(duplicates.clone(), Some(test_path)).is_ok());
+        
+        let content: String = fs::read_to_string(test_path).expect("File should exist");
+        assert!(content.contains("file2.txt"));
+        let _ = fs::remove_file(test_path);
+    }
+
+    #[test]
+    fn test_xml_display_to_stdout() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file1.txt".to_string(),
+                paths: ["path1".to_string(), "path2".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 123,
+                checksums: None,
+            }
+        ];
+        assert!(xml_display(duplicates.clone(), None).is_ok());
+    }
+
+    #[test]
+    fn test_xml_display_to_file() {
+        let duplicates: Vec<DuplicateFile> = vec![
+            DuplicateFile {
+                name: "file2.txt".to_string(),
+                paths: ["pathA".to_string(), "pathB".to_string()].into_iter().collect(),
+                nb_occurrences: 2,
+                size: 456,
+                checksums: None,
+            }
+        ];
+        
+        let test_path: &'static str = "test_output.xml";
+        assert!(xml_display(duplicates.clone(), Some(test_path)).is_ok());
+        
+        let content: String = fs::read_to_string(test_path).expect("File should exist");
+        assert!(content.contains("file2.txt"));
+        let _ = fs::remove_file(test_path);
+    }
 }

@@ -14,7 +14,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-#[derive(Eq, PartialEq, Serialize)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct DuplicateFile {
     pub paths: HashSet<String>,
     pub name: String,
@@ -201,4 +201,88 @@ fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingCon
     map.retain(|_, v| v.nb_occurrences > 1);
     // Convert the map values into a vector.
     map.into_values().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use crate::cli::CliOutput;
+
+    #[test]
+    fn test_search_eventual_duplicates_by_name() {
+        let files = vec![
+            VirtualFile {
+                name: "file1.txt".to_string(),
+                full_path: "/tmp/file1.txt".to_string(),
+                size: 123,
+                checksums: None,
+            },
+            VirtualFile {
+                name: "file1.txt".to_string(),
+                full_path: "/tmp/copy_file1.txt".to_string(),
+                size: 123,
+                checksums: None,
+            },
+            VirtualFile {
+                name: "file2.txt".to_string(),
+                full_path: "/tmp/file2.txt".to_string(),
+                size: 456,
+                checksums: None,
+            },
+        ];
+
+        let config: FindingConfig = FindingConfig {
+            search_path: "/tmp".to_string(),
+            enable_search_by_name: true,
+            include_hidden_files: false,
+            hash: None,
+            output: CliOutput::Standard,
+        };
+
+        let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&files, &config);
+        assert_eq!(duplicates.len(), 1);
+        
+        let duplicate: &DuplicateFile = &duplicates[0];
+        assert_eq!(duplicate.name, "file1.txt");
+        assert_eq!(duplicate.nb_occurrences, 2);
+        assert!(duplicate.paths.contains("/tmp/file1.txt"));
+        assert!(duplicate.paths.contains("/tmp/copy_file1.txt"));
+    }
+
+    #[test]
+    fn test_search_eventual_duplicates_by_checksum() {
+        let mut files: Vec<VirtualFile> = Vec::new();
+        let mut checksums: HashMap<String, String> = HashMap::new();
+        checksums.insert("md5".to_string(), "abc123".to_string());
+
+        files.push(VirtualFile {
+            name: "fileA.txt".to_string(),
+            full_path: "/tmp/fileA.txt".to_string(),
+            size: 100,
+            checksums: Some(checksums.clone()),
+        });
+        files.push(VirtualFile {
+            name: "fileB.txt".to_string(),
+            full_path: "/tmp/fileB.txt".to_string(),
+            size: 100,
+            checksums: Some(checksums.clone()),
+        });
+
+        let config: FindingConfig = FindingConfig {
+            search_path: "/tmp".to_string(),
+            enable_search_by_name: false,
+            include_hidden_files: false,
+            hash: None,
+            output: CliOutput::Standard,
+        };
+
+        let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&files, &config);
+        assert_eq!(duplicates.len(), 1);
+        
+        let duplicate: &DuplicateFile = &duplicates[0];
+        assert_eq!(duplicate.nb_occurrences, 2);
+        assert!(duplicate.paths.contains("/tmp/fileA.txt"));
+        assert!(duplicate.paths.contains("/tmp/fileB.txt"));
+    }
 }
