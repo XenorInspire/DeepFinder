@@ -4,7 +4,7 @@ DeepFinder is a powerful Rust tool that helps you to find duplicate files in a d
 It can also find files with the same content with different names in different subdirectories.
 
 This software has been developed to be used especially for a CLI use.
-However, DeepFinder has the ability to save the output in different formats like JSON, CSV or XML that can be used in other software
+However, DeepFinder has the ability to save the output in different formats like JSON, CSV or XML that can be used with other tools.
 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://img.shields.io/badge/License-MIT-blue.svg)
