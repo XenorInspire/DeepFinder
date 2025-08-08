@@ -14,10 +14,9 @@ However, DeepFinder has the ability to save the output in different formats like
 
 ## Features
 
-- [ ] Find duplicate files in a directory and its subdirectories with the same name or not
-- [ ] Generate a report in JSON, CSV or XML format
-- [ ] Display the progress of the search
-- [ ] Can be used in a script or integrated into another software
+- [x] Find duplicate files in a directory and its subdirectories with the same name or not
+- [x] Generate a report in JSON, CSV or XML format
+- [x] Can be used in a script or integrated into another software
 
 
 ## Installation
