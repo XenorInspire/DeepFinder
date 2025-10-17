@@ -15,6 +15,7 @@ pub struct FindingConfig {
     pub search_path: String,
     pub enable_search_by_name: bool,
     pub include_hidden_files: bool,
+    pub include_hashes_in_output: bool,
     pub hash: Option<Vec<String>>,
     pub output: CliOutput,
 }
@@ -178,6 +179,13 @@ fn build_command_context() -> Command {
                 ]),
         )
         .arg(
+            Arg::new("include_hashes")
+                .short('i')
+                .long("include-hashes")
+                .help("Include the checksums of the duplicates in the output")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
             Arg::new("version")
                 .short('v')
                 .long("version")
@@ -205,6 +213,7 @@ fn display_help() {
     println!("  -J <path>, --json-output <path>\tExport the results in a JSON file.\n");
     println!("  -x <path>, --xml-display\t\tExport the results to stdin in a XML format.\n");
     println!("  -X <path>, --xml-output <path>\tExport the results in a XML file.\n ");
+    println!("  -i, --include-hashes\t\t\tInclude the checksums of the duplicates in the output.\n\t\t\t\t\tThis argument requires -a to be specified.\n");
     println!("  -v, --version\t\t\t\tDisplay the version of DeepFinder.\n");
     println!("  -h, --help\t\t\t\tDisplay this help message.\n\n");
 }
@@ -278,6 +287,7 @@ fn parse_user_choices(matches: &ArgMatches) -> Result<FindingConfig, DeepFinderE
         search_path,
         enable_search_by_name: matches.get_flag("name") || !matches.contains_id("hash_algorithm"),
         include_hidden_files: matches.get_flag("hidden_files"),
+        include_hashes_in_output: matches.contains_id("hash_algorithm") && matches.get_flag("include_hashes"),
         hash,
         output,
     })
@@ -325,6 +335,7 @@ mod tests {
             search_path,
             enable_search_by_name: true,
             include_hidden_files: true,
+            include_hashes_in_output: false,
             hash: Some(vec!["md5".to_string(), "sha256".to_string()]),
             output,
         };
