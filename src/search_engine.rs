@@ -41,7 +41,7 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     }
 
     let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&virtual_files, config);
-    export_findings_scheduler(duplicates, config)
+    export_findings_scheduler(&duplicates, config)
 
 }
 

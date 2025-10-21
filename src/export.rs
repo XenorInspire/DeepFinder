@@ -26,14 +26,14 @@ struct DuplicateFileSerialized<'a> {
 ///
 /// # Arguments
 ///
-/// * `duplicates` - A vector of DuplicateFile containing the findings.
+/// * `duplicates` - Array of DuplicateFile containing the findings.
 /// * `config` - The FindingConfig struct with the user's configuration.
 ///
 /// # Returns
 ///
 /// The result of the export findings scheduler, DeepFinderError otherwise.
 ///
-pub fn export_findings_scheduler(duplicates: Vec<DuplicateFile>, config: &FindingConfig) -> Result<(), DeepFinderError> {
+pub fn export_findings_scheduler(duplicates: &[DuplicateFile], config: &FindingConfig) -> Result<(), DeepFinderError> {
     match &config.output {
         CliOutput::Standard => { simple_display(duplicates, config.include_hashes_in_output); Ok(()) },
         CliOutput::JsonStdin => json_display(duplicates, None, config.include_hashes_in_output),
@@ -49,9 +49,9 @@ pub fn export_findings_scheduler(duplicates: Vec<DuplicateFile>, config: &Findin
 ///
 /// # Arguments
 ///
-/// * `duplicates` - A vector of DuplicateFile containing the findings.
+/// * `duplicates` - Array of DuplicateFile structs containing the findings.
 ///
-fn simple_display(duplicates: Vec<DuplicateFile>, include_hashes: bool) {
+fn simple_display(duplicates: &[DuplicateFile], include_hashes: bool) {
     if duplicates.is_empty() {
         println!("No duplicate files found.");
         return;
@@ -64,7 +64,7 @@ fn simple_display(duplicates: Vec<DuplicateFile>, include_hashes: bool) {
         
         println!("Occurrences: {}", duplicate.paths.len());
         if include_hashes && let Some(checksums) = &duplicate.checksums {
-            checksums.iter().for_each(|c| println!("Checksum ({0}) : {1}", c.0, c.1));
+            for c in checksums { println!("Checksum ({0}) : {1}", c.0, c.1); }
         }
         println!();
     }
@@ -74,14 +74,14 @@ fn simple_display(duplicates: Vec<DuplicateFile>, include_hashes: bool) {
 ///
 /// # Arguments
 ///
-/// * `duplicates` - A vector of DuplicateFile structs containing the findings.
+/// * `duplicates` - Array of DuplicateFile structs containing the findings.
 /// * `path` - An optional path to save the JSON output.
 ///
 /// # Returns
 ///
 /// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
 ///
-fn json_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
+fn json_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
     let json_values: Vec<DuplicateFileSerialized> = duplicates.iter().map(|d| {
         DuplicateFileSerialized {
             paths: &d.paths,
@@ -108,14 +108,14 @@ fn json_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hash
 ///
 /// # Arguments
 ///
-/// * `duplicates` - A vector of DuplicateFile structs containing the findings.
+/// * `duplicates` - Array of DuplicateFile structs containing the findings.
 /// * `path` - An optional path to save the CSV output.
 ///
 /// # Returns
 ///
 /// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
 ///
-fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
+fn csv_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
     let header: Vec<&str> = if include_hashes {
         ["Name", "Paths", "Occurrences", "Size", "Checksums"].to_vec()
     } else {
@@ -127,28 +127,37 @@ fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hashe
         .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
 
     for file in duplicates {
-        let content: Vec<String> = if include_hashes {
-            vec![
-                file.name.clone(),
-                file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
-                file.paths.len().to_string(),
-                file.size.to_string(),
-                file.checksums.as_ref().map_or("N/A".to_string(), |checksums| {
+        if include_hashes {
+            let checksums_str: String =  file.checksums.as_ref().map_or_else(
+                || "N/A".to_string(),
+                |checksums| {
                     checksums.iter()
-                        .map(|(algo, checksum)| format!("{algo}:{checksum}"))
-                        .collect::<Vec<String>>()
+                        .map(|(algo, checksum)| format!("{}:{}", algo, checksum))
+                        .collect::<Vec<_>>()
                         .join("\n")
-                }),
-            ]
+                },
+            );
+            
+            wtr.write_record(
+                [
+                    &file.name,
+                    &file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
+                    &file.paths.len().to_string(),
+                    &file.size.to_string(),
+                    &checksums_str,
+                ]
+            ).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
         } else {
-            vec![
-                file.name.clone(),
-                file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
-                file.paths.len().to_string(),
-                file.size.to_string(),
-            ]
-        };
-        wtr.write_record(content).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
+            wtr.write_record(
+                [
+                    &file.name,
+                    &file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
+                    &file.paths.len().to_string(),
+                    &file.size.to_string(),
+                ]
+            ).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
+        }
+        
     }
     
     let csv_data: String = String::from_utf8(wtr.into_inner().unwrap_or_default())
@@ -168,14 +177,14 @@ fn csv_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hashe
 ///
 /// # Arguments
 ///
-/// * `duplicates` - A vector of DuplicateFile structs containing the findings.
+/// * `duplicates` - Array of DuplicateFile structs containing the findings.
 /// * `path` - An optional path to save the XML output.
 ///
 /// # Returns
 ///
 /// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
 ///
-fn xml_display(duplicates: Vec<DuplicateFile>, path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
+fn xml_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
     #[derive(Serialize)]
     #[serde(rename = "duplicate_files")]
     struct DuplicateFilesWrapper<'a> {
@@ -220,7 +229,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(json_display(duplicates.clone(), None, true).is_ok());
+        assert!(json_display(&duplicates.clone(), None, true).is_ok());
     }
 
     #[test]
@@ -234,7 +243,7 @@ mod tests {
             }
         ];
         let test_path: &'static str = "test_output.json";
-        assert!(json_display(duplicates.clone(), Some(test_path), false).is_ok());
+        assert!(json_display(&duplicates.clone(), Some(test_path), false).is_ok());
 
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));
@@ -251,7 +260,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(csv_display(duplicates.clone(), None, false).is_ok());
+        assert!(csv_display(&duplicates.clone(), None, false).is_ok());
     }
 
     #[test]
@@ -266,7 +275,7 @@ mod tests {
         ];
         
         let test_path: &'static str = "test_output.csv";
-        assert!(csv_display(duplicates.clone(), Some(test_path), true).is_ok());
+        assert!(csv_display(&duplicates.clone(), Some(test_path), true).is_ok());
         
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));
@@ -283,7 +292,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(xml_display(duplicates.clone(), None, false).is_ok());
+        assert!(xml_display(&duplicates.clone(), None, false).is_ok());
     }
 
     #[test]
@@ -298,7 +307,7 @@ mod tests {
         ];
         
         let test_path: &'static str = "test_output.xml";
-        assert!(xml_display(duplicates.clone(), Some(test_path), true).is_ok());
+        assert!(xml_display(&duplicates.clone(), Some(test_path), true).is_ok());
         
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));
