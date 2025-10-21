@@ -8,7 +8,7 @@ description = "A low level Rust tool to find duplicates in large directories."
 keywords = ["deepfinder", "duplicate", "finder", "hash", "file", "directory"]
 
 [dependencies]
-clap = { version = "4.5.49", features = ["std"], default-features = false }
+clap = { version = "4.5.50", features = ["std"], default-features = false }
 num_cpus = { version = "1.17.0", default-features = false }
 serde_json = { version = "1.0.145", features = ["std"], default-features = false }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
