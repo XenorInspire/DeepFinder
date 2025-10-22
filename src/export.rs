@@ -15,6 +15,7 @@ use std::{collections::{HashMap, HashSet}, fs};
 ///
 #[derive(Serialize)]
 struct DuplicateFileSerialized<'a> {
+    pub index: usize,
     pub paths: &'a HashSet<String>,
     pub name: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -82,8 +83,9 @@ fn simple_display(duplicates: &[DuplicateFile], include_hashes: bool) {
 /// Result<(), DeepFinderError> - Returns Ok if the display (and saving if a path was specified) is successful, DeepFinderError otherwise.
 ///
 fn json_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
-    let json_values: Vec<DuplicateFileSerialized> = duplicates.iter().map(|d| {
+    let json_values: Vec<DuplicateFileSerialized> = duplicates.iter().enumerate().map(|(idx, d)| {
         DuplicateFileSerialized {
+            index: idx + 1,
             paths: &d.paths,
             name: &d.name,
             checksums: if include_hashes { d.checksums.as_ref() } else { None },
@@ -117,16 +119,16 @@ fn json_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes
 ///
 fn csv_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes: bool) -> Result<(), DeepFinderError> {
     let header: Vec<&str> = if include_hashes {
-        ["Name", "Paths", "Occurrences", "Size", "Checksums"].to_vec()
+        ["Index", "Filename", "Paths", "Occurrences", "Size", "Checksums"].to_vec()
     } else {
-        ["Name", "Paths", "Occurrences", "Size"].to_vec()
+        ["Index", "Filename", "Paths", "Occurrences", "Size"].to_vec()
     };
 
     let mut wtr: csv::Writer<Vec<u8>> = WriterBuilder::new().delimiter(b';').from_writer(vec![]);
     wtr.write_record(&header)
         .map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
 
-    for file in duplicates {
+    for (idx, file) in duplicates.iter().enumerate() {
         if include_hashes {
             let checksums_str: String =  file.checksums.as_ref().map_or_else(
                 || "N/A".to_string(),
@@ -140,6 +142,7 @@ fn csv_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes:
             
             wtr.write_record(
                 [
+                    &(idx + 1).to_string(),
                     &file.name,
                     &file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
                     &file.paths.len().to_string(),
@@ -149,7 +152,8 @@ fn csv_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes:
             ).map_err(|e| DeepFinderError::SystemError(SystemError::UnableToSerialize("csv".to_string(), e.to_string())))?;
         } else {
             wtr.write_record(
-                [
+                [   
+                    &(idx + 1).to_string(),
                     &file.name,
                     &file.paths.iter().cloned().collect::<Vec<String>>().join("\n"),
                     &file.paths.len().to_string(),
@@ -191,9 +195,10 @@ fn xml_display(duplicates: &[DuplicateFile], path: Option<&str>, include_hashes:
         #[serde(rename = "duplicate_file")]
         files: Vec<DuplicateFileSerialized<'a>>,
     }
-    
-    let xml_values: Vec<DuplicateFileSerialized> = duplicates.iter().map(|d| {
+
+    let xml_values: Vec<DuplicateFileSerialized> = duplicates.iter().enumerate().map(|(idx, d)| {
         DuplicateFileSerialized {
+            index: idx + 1,
             paths: &d.paths,
             name: &d.name,
             checksums: if include_hashes { d.checksums.as_ref() } else { None },
