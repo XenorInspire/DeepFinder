@@ -19,7 +19,6 @@ pub struct DuplicateFile {
     pub paths: HashSet<String>,
     pub name: String,
     pub checksums: Option<HashMap<String, String>>,
-    pub nb_occurrences: usize,
     pub size: u64,
 }
 
@@ -42,7 +41,7 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     }
 
     let duplicates: Vec<DuplicateFile> = search_eventual_duplicates(&virtual_files, config);
-    export_findings_scheduler(duplicates, config)
+    export_findings_scheduler(&duplicates, config)
 
 }
 
@@ -126,7 +125,7 @@ fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>
             let start: usize = i * chunk_size;
             let end: usize = ((i + 1) * chunk_size).min(virtual_files.len());
 
-            // We can break the loop because there are no more files to process.
+            // No more files to process.
             if start >= end {
                 break;
             }
@@ -189,17 +188,14 @@ fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingCon
             paths: HashSet::new(),
             name: file.name.clone(),
             checksums: file.checksums.clone(),
-            nb_occurrences: 0,
             size: file.size,
         });
 
         entry.paths.insert(file.full_path.clone());
-        entry.nb_occurrences += 1;
     }
 
     // Filter out entries with only one occurrence.
-    map.retain(|_, v| v.nb_occurrences > 1);
-    // Convert the map values into a vector.
+    map.retain(|_, v| v.paths.len() > 1);
     map.into_values().collect()
 }
 
@@ -236,6 +232,7 @@ mod tests {
             search_path: "/tmp".to_string(),
             enable_search_by_name: true,
             include_hidden_files: false,
+            include_hashes_in_output: false,
             hash: None,
             output: CliOutput::Standard,
         };
@@ -245,7 +242,7 @@ mod tests {
         
         let duplicate: &DuplicateFile = &duplicates[0];
         assert_eq!(duplicate.name, "file1.txt");
-        assert_eq!(duplicate.nb_occurrences, 2);
+        assert_eq!(duplicate.paths.len(), 2);
         assert!(duplicate.paths.contains("/tmp/file1.txt"));
         assert!(duplicate.paths.contains("/tmp/copy_file1.txt"));
     }
@@ -273,6 +270,7 @@ mod tests {
             search_path: "/tmp".to_string(),
             enable_search_by_name: false,
             include_hidden_files: false,
+            include_hashes_in_output: false,
             hash: None,
             output: CliOutput::Standard,
         };
@@ -281,7 +279,7 @@ mod tests {
         assert_eq!(duplicates.len(), 1);
         
         let duplicate: &DuplicateFile = &duplicates[0];
-        assert_eq!(duplicate.nb_occurrences, 2);
+        assert_eq!(duplicate.paths.len(), 2);
         assert!(duplicate.paths.contains("/tmp/fileA.txt"));
         assert!(duplicate.paths.contains("/tmp/fileB.txt"));
     }
