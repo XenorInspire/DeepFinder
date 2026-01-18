@@ -216,7 +216,7 @@ const fn get_invalid_chars() -> &'static [char] {
 ///
 /// # Returns
 ///
-/// A string containing the full path. DeepFinderError if the path is invalid or it can't get the current directory.
+/// A string containing the full path. SystemError if the path is invalid or it can't get the current directory.
 ///
 fn build_full_path(path: &str) -> Result<String, SystemError> {
     let full_path: String = if Path::new(path).is_absolute() {
