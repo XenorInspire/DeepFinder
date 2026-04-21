@@ -1,6 +1,6 @@
 [package]
 name = "deepfinder"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["Xen0rInspire"]
 license = "MIT"
@@ -8,7 +8,7 @@ description = "A low level Rust tool to find duplicates in large directories."
 keywords = ["deepfinder", "duplicate", "finder", "hash", "file", "directory"]
 
 [dependencies]
-clap = { version = "4.6.0", features = ["std"], default-features = false }
+clap = { version = "4.6.1", features = ["std"], default-features = false }
 num_cpus = { version = "1.17.0", default-features = false }
 serde_json = { version = "1.0.149", features = ["std"], default-features = false }
 serde = { version = "1.0.228", features = ["derive"], default-features = false }
@@ -20,5 +20,5 @@ sha2 = { version = "0.11.0", default-features = false }
 digest = { version = "0.11.2", default-features = false }
 hex = { version = "0.4.3", features = ["alloc"], default-features = false }
 sha3 = { version = "0.11.0", default-features = false }
-blake2 = { version = "0.11.0-rc.5", default-features = false }
+blake2 = { version = "0.11.0-rc.6", default-features = false }
 whirlpool = { version = "0.11.0", default-features = false }
