@@ -234,7 +234,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(json_display(&duplicates.clone(), None, true).is_ok());
+        assert!(json_display(&duplicates, None, true).is_ok());
     }
 
     #[test]
@@ -248,7 +248,7 @@ mod tests {
             }
         ];
         let test_path: &'static str = "test_output.json";
-        assert!(json_display(&duplicates.clone(), Some(test_path), false).is_ok());
+        assert!(json_display(&duplicates, Some(test_path), false).is_ok());
 
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));
@@ -265,7 +265,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(csv_display(&duplicates.clone(), None, false).is_ok());
+        assert!(csv_display(&duplicates, None, false).is_ok());
     }
 
     #[test]
@@ -280,7 +280,7 @@ mod tests {
         ];
         
         let test_path: &'static str = "test_output.csv";
-        assert!(csv_display(&duplicates.clone(), Some(test_path), true).is_ok());
+        assert!(csv_display(&duplicates, Some(test_path), true).is_ok());
         
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));
@@ -297,7 +297,7 @@ mod tests {
                 checksums: None,
             }
         ];
-        assert!(xml_display(&duplicates.clone(), None, false).is_ok());
+        assert!(xml_display(&duplicates, None, false).is_ok());
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod tests {
         ];
         
         let test_path: &'static str = "test_output.xml";
-        assert!(xml_display(&duplicates.clone(), Some(test_path), true).is_ok());
+        assert!(xml_display(&duplicates, Some(test_path), true).is_ok());
         
         let content: String = fs::read_to_string(test_path).expect("File should exist");
         assert!(content.contains("file2.txt"));

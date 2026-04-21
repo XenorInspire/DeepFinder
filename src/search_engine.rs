@@ -11,6 +11,7 @@ use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    sync::Arc,
     thread::{self, JoinHandle},
 };
 
@@ -121,7 +122,7 @@ fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>
     for hash_algorithm in hash_algorithms {
         let mut threads: Vec<JoinHandle<Vec<VirtualFile>>>= Vec::new();
         for i in 0..num_cores {
-            let hash_algorithm: String = hash_algorithm.clone();
+            let hash_algorithm: Arc<String> = Arc::new(hash_algorithm.to_string());
             let start: usize = i * chunk_size;
             let end: usize = ((i + 1) * chunk_size).min(virtual_files.len());
 
