@@ -1,0 +1,86 @@
+.TH DEEPFINDER 1 "October 2025" "0.1.2" "deepfinder manual"
+.SH NAME
+deepfinder \- Find duplicate files by name or file content
+.SH SYNOPSIS
+.B deepfinder
+<path> [options]
+.SH DESCRIPTION
+.B deepfinder
+is a command-line utility used to detect duplicate files within a given directory. It can identify duplicates either by their filenames or by computing and comparing content hashes. It also supports exporting results in multiple formats including CSV, JSON, and XML.
+
+.SH OPTIONS
+.TP
+.BR -n ", " --name
+Find duplicates by their filename.  
+Selected by default if neither \fB-n\fR nor \fB-a\fR is specified.
+
+.TP
+.BR -a ", " --hash-algorithm
+Find duplicates by file content using a hash algorithm.  
+Supported algorithms:  
+\fImd5, sha1, sha224, sha256, sha384, sha512,\fR  
+\fIsha3-224, sha3-256, sha3-384, sha3-512,\fR  
+\fIblake2b-512, blake2s-256, whirlpool\fR.
+
+.TP
+.BR -f ", " --hidden-files
+Include hidden files in the search.
+
+.TP
+.BR -c " <path>, " --csv-display
+Output the results in CSV format to standard output.
+
+.TP
+.BR -C " <path>, " --csv-output " <path>"
+Export the results to a CSV file.
+
+.TP
+.BR -j " <path>, " --json-display
+Output the results in JSON format to standard output.
+
+.TP
+.BR -J " <path>, " --json-output " <path>"
+Export the results to a JSON file.
+
+.TP
+.BR -x " <path>, " --xml-display
+Output the results in XML format to standard output.
+
+.TP
+.BR -X " <path>, " --xml-output " <path>"
+Export the results to an XML file.
+
+.TP
+.BR -i ", " --include-hashes
+Include the checksums of the duplicates in the output. This argument requires -a to be specified.
+
+.TP
+.BR -v ", " --version
+Display the version of \fBdeepfinder\fR.
+
+.TP
+.BR -h ", " --help
+Display this help message.
+
+.SH EXAMPLES
+.TP
+Find duplicates by name:
+.B deepfinder /home/user/Documents
+
+.TP
+Find duplicates by content using SHA-256:
+.B deepfinder /home/user/Documents -a sha256
+
+.TP
+Export results to JSON on stdout:
+.B deepfinder /data -j
+
+.TP
+Export results to a CSV file:
+.B deepfinder /data -C results.csv
+
+.SH AUTHOR
+Developed by Xen0r.
+
+.SH LICENSE
+This software is released under the MIT License (or specify a different license if applicable).
