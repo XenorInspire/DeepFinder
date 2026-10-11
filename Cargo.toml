@@ -1,6 +1,6 @@
 [package]
 name = "deepfinder"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 authors = ["Xen0rInspire"]
 license = "MIT"
@@ -10,7 +10,7 @@ keywords = ["deepfinder", "duplicate", "finder", "hash", "file", "directory"]
 [dependencies]
 clap = { version = "4.6.7", features = ["std"], default-features = false }
 num_cpus = { version = "1.17.0", default-features = false }
-serde_json = { version = "1.0.151", features = ["std"], default-features = false }
+serde_json = { version = "1.0.154", features = ["std"], default-features = false }
 serde = { version = "1.0.229", features = ["derive"], default-features = false }
 csv = { version = "1.4.0", default-features = false }
 serde-xml-rs = { version = "0.8.2", default-features = false }
