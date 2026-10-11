@@ -4,7 +4,7 @@ DeepFinder is a powerful Rust tool that helps you to find duplicate files in a d
 It can also find files with the same content with different names in different subdirectories.
 
 This software has been developed to be used especially for a CLI use.
-However, DeepFinder has the ability to save the output in different formats like JSON, CSV or XML that can be used in other software
+However, DeepFinder has the ability to save the output in different formats like JSON, CSV or XML that can be used with other tools.
 
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://img.shields.io/badge/License-MIT-blue.svg)
@@ -14,10 +14,9 @@ However, DeepFinder has the ability to save the output in different formats like
 
 ## Features
 
-- [ ] Find duplicate files in a directory and its subdirectories with the same name or not
-- [ ] Generate a report in JSON, CSV or XML format
-- [ ] Display the progress of the search
-- [ ] Can be used in a script or integrated into another software
+- [x] Find duplicate files in a directory and its subdirectories with the same name or not
+- [x] Generate a report in JSON, CSV or XML format
+- [x] Can be used in a script or integrated into another software
 
 
 ## Installation
@@ -76,30 +75,33 @@ $ deepfinder --help
 
 Usage: deepfinder <path> [options]
 Options:
-  -n, --name                            Find the duplicates by their name.
+  -n, --name                            Find the duplicates by their name (faster option).
                                         Selected by default if both -n and -a arguments are not specified.
 
-  -a, --hash-algorithm                  Find the duplicates from the hash.
+  -a, --hash-algorithm                  Find the duplicates based on file content (slower option).
                                         It can be used to compare the content of the files.
                                         You can choose between: md5, sha1, sha224, sha256, sha384, sha512,
                                         sha3-224, sha3-256, sha3-384, sha3-512, blake2b-512, blake2s-256 and whirlpool.
-                                        
+
   -f, --hidden-files                    Enable search for hidden files.
-  
+
   -c <path>, --csv-display              Export the results to stdin in a CSV format.
-  
+
   -C <path>, --csv-output <path>        Export the results in a CSV file.
-  
+
   -j <path>, --json-display             Export the results to stdin in a JSON format.
-  
+
   -J <path>, --json-output <path>       Export the results in a JSON file.
-  
+
   -x <path>, --xml-display              Export the results to stdin in a XML format.
-  
+
   -X <path>, --xml-output <path>        Export the results in a XML file.
-  
+ 
+  -i, --include-hashes                  Include the checksums of the duplicates in the output.
+                                        This argument requires -a to be specified.
+
   -v, --version                         Display the version of DeepFinder.
-  
+
   -h, --help                            Display this help message.
 
 ```
