@@ -256,7 +256,7 @@ pub fn build_virtual_files(file_paths: &Vec<String>) -> Vec<VirtualFile> {
                 None => continue,
             },
             size: get_file_size(path),
-            full_path: path.to_string(),
+            full_path: path.clone(),
             checksums: None,
         };
         virtual_files.push(file);

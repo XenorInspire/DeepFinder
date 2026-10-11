@@ -23,6 +23,12 @@ pub struct DuplicateFile {
     pub size: u64,
 }
 
+#[derive(Eq, Hash, PartialEq)]
+enum DuplicateKey<'a> {
+    Name(&'a str),
+    Checksums(Vec<&'a str>),
+}
+
 /// This function is the scheduler for the search engine.
 ///
 /// # Arguments
@@ -38,6 +44,9 @@ pub fn search_engine_scheduler(config: &FindingConfig) -> Result<(), DeepFinderE
     let mut virtual_files: Vec<VirtualFile> = build_virtual_files(&file_paths);
     
     if let Some(hash_algorithms) = &config.hash {
+        if !config.enable_search_by_name {
+            retain_hash_candidates_by_size(&mut virtual_files);
+        }
         hash_handler(hash_algorithms, &mut virtual_files)?;
     }
 
@@ -107,59 +116,69 @@ pub fn search_files(dir: &str, include_hidden_files: bool) -> Result<Vec<String>
 ///
 /// # Arguments
 ///
-/// * `hash_algorithms` - A string slice that holds the directory to search.
-/// * `virtual_files` - A boolean that indicates if hidden files should be included in the search or not.
+/// * `hash_algorithms` - The algorithms to use when hashing each file.
+/// * `virtual_files` - The files to hash, updated in place with their checksums.
 ///
 /// # Returns
 ///
 /// A vector of strings with the files found in the directory, SystemError otherwise.
 ///
 fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>) -> Result<(), DeepFinderError> {
-    let num_cores: usize = num_cpus::get(); // Get the number of logical cores.
-    let chunk_size: usize = virtual_files.len().div_ceil(num_cores);
-    let mut updated_files: Vec<VirtualFile> = Vec::new();
+    if virtual_files.is_empty() {
+        return Ok(());
+    }
 
-    for hash_algorithm in hash_algorithms {
-        let mut threads: Vec<JoinHandle<Vec<VirtualFile>>>= Vec::new();
-        for i in 0..num_cores {
-            let hash_algorithm: Arc<String> = Arc::new(hash_algorithm.to_string());
-            let start: usize = i * chunk_size;
-            let end: usize = ((i + 1) * chunk_size).min(virtual_files.len());
+    let file_count: usize = virtual_files.len();
+    let worker_count: usize = num_cpus::get().min(file_count);
+    let chunk_size: usize = file_count.div_ceil(worker_count);
+    let hash_algorithms: Arc<Vec<String>> = Arc::new(hash_algorithms.to_vec());
+    let mut threads: Vec<JoinHandle<Vec<VirtualFile>>> = Vec::new();
+    let mut files = std::mem::take(virtual_files).into_iter();
 
-            // No more files to process.
-            if start >= end {
-                break;
-            }
-
-            let mut chunk_files: Vec<VirtualFile> = virtual_files[start..end].to_vec();
-            threads.push(thread::spawn(move || {
-                for file in &mut chunk_files {
-                    if let Some(hash) = system::manage_hash(&file.full_path, &hash_algorithm) {
-                        file.update_checksum(&hash_algorithm, hash);
+    loop {
+        let mut chunk_files: Vec<VirtualFile> = files.by_ref().take(chunk_size).collect();
+        if chunk_files.is_empty() {
+            break;
+        }
+        let hash_algorithms: Arc<Vec<String>> = Arc::clone(&hash_algorithms);
+        threads.push(thread::spawn(move || {
+            for file in &mut chunk_files {
+                for hash_algorithm in hash_algorithms.iter() {
+                    if let Some(hash) = system::manage_hash(&file.full_path, hash_algorithm) {
+                        file.update_checksum(hash_algorithm, hash);
                     }
                 }
-                chunk_files // Return the processed chunk.
-            }));
-        }
-
-        for thread in threads {
-            let chunk: Vec<VirtualFile> = thread.join().map_err(|_| DeepFinderError::SystemError(SystemError::ThreadError))?;
-            for file in chunk {
-                if let Some(existing_file) = updated_files.iter_mut().find(|f| f.full_path == file.full_path) {
-                    // If the file already exists, update its checksums.
-                    if let Some(checksums) = &file.checksums {
-                        existing_file.update_checksum(hash_algorithm, checksums.get(hash_algorithm.as_str()).cloned().unwrap_or_default());
-                    }
-                } else {
-                    // Otherwise, add the new file to the updated files.
-                    updated_files.push(file);
-                }
             }
-        }
+            chunk_files
+        }));
+    }
+
+    let mut updated_files: Vec<VirtualFile> = Vec::with_capacity(file_count);
+    for thread in threads {
+        updated_files.extend(
+            thread
+                .join()
+                .map_err(|_| DeepFinderError::SystemError(SystemError::ThreadError))?,
+        );
     }
 
     *virtual_files = updated_files;
     Ok(())
+}
+
+/// This function is responsible for filtering the virtual files by size, keeping only those with more than one occurrence.
+/// It's been used especially when name-based search is disabled, to reduce the number of files to hash and compare.
+///
+/// # Arguments
+///
+/// * `virtual_files` - A mutable reference to the vector containing the virtual files.
+///
+fn retain_hash_candidates_by_size(virtual_files: &mut Vec<VirtualFile>) {
+    let mut size_counts: HashMap<u64, usize> = HashMap::with_capacity(virtual_files.len());
+    for file in virtual_files.iter() {
+        *size_counts.entry(file.size).or_default() += 1;
+    }
+    virtual_files.retain(|file| size_counts.get(&file.size).is_some_and(|count| *count > 1));
 }
 
 /// This function is responsible for searching eventual duplicates in the virtual files.
@@ -174,13 +193,22 @@ fn hash_handler(hash_algorithms: &[String], virtual_files: &mut Vec<VirtualFile>
 /// A vector of DuplicateFile containing the duplicates found.
 ///
 fn search_eventual_duplicates(virtual_files: &[VirtualFile], config: &FindingConfig) -> Vec<DuplicateFile> {
-    let mut map: HashMap<String, DuplicateFile> = HashMap::new();
+    let mut map: HashMap<DuplicateKey<'_>, DuplicateFile> = HashMap::with_capacity(virtual_files.len());
 
     for file in virtual_files {
-        let key: String = if config.enable_search_by_name {
-            file.name.clone()
-        } else if let Some(checksums) = &file.checksums {
-            checksums.iter().map(|(k, v)| format!("{k}:{v}")).collect::<Vec<_>>().join("|")
+        let key = if config.enable_search_by_name {
+            DuplicateKey::Name(&file.name)
+        } else if let (Some(hash_algorithms), Some(checksums)) =
+            (&config.hash, &file.checksums)
+        {
+            let Some(ordered_checksums) = hash_algorithms
+                .iter()
+                .map(|algorithm| checksums.get(algorithm).map(String::as_str))
+                .collect::<Option<Vec<_>>>()
+            else {
+                continue;
+            };
+            DuplicateKey::Checksums(ordered_checksums)
         } else {
             continue;
         };
@@ -253,6 +281,7 @@ mod tests {
         let mut files: Vec<VirtualFile> = Vec::new();
         let mut checksums: HashMap<String, String> = HashMap::new();
         checksums.insert("md5".to_string(), "abc123".to_string());
+        checksums.insert("sha256".to_string(), "def456".to_string());
 
         files.push(VirtualFile {
             name: "fileA.txt".to_string(),
@@ -260,11 +289,14 @@ mod tests {
             size: 100,
             checksums: Some(checksums.clone()),
         });
+        let mut reordered_checksums: HashMap<String, String> = HashMap::new();
+        reordered_checksums.insert("sha256".to_string(), "def456".to_string());
+        reordered_checksums.insert("md5".to_string(), "abc123".to_string());
         files.push(VirtualFile {
             name: "fileB.txt".to_string(),
             full_path: "/tmp/fileB.txt".to_string(),
             size: 100,
-            checksums: Some(checksums.clone()),
+            checksums: Some(reordered_checksums),
         });
 
         let config: FindingConfig = FindingConfig {
@@ -272,7 +304,7 @@ mod tests {
             enable_search_by_name: false,
             include_hidden_files: false,
             include_hashes_in_output: false,
-            hash: None,
+            hash: Some(vec!["md5".to_string(), "sha256".to_string()]),
             output: CliOutput::Standard,
         };
 
@@ -283,5 +315,34 @@ mod tests {
         assert_eq!(duplicate.paths.len(), 2);
         assert!(duplicate.paths.contains("/tmp/fileA.txt"));
         assert!(duplicate.paths.contains("/tmp/fileB.txt"));
+    }
+
+    #[test]
+    fn test_retain_hash_candidates_by_size() {
+        let mut files = vec![
+            VirtualFile {
+                name: "unique.txt".to_string(),
+                full_path: "/tmp/unique.txt".to_string(),
+                size: 1,
+                checksums: None,
+            },
+            VirtualFile {
+                name: "first.txt".to_string(),
+                full_path: "/tmp/first.txt".to_string(),
+                size: 2,
+                checksums: None,
+            },
+            VirtualFile {
+                name: "second.txt".to_string(),
+                full_path: "/tmp/second.txt".to_string(),
+                size: 2,
+                checksums: None,
+            },
+        ];
+
+        retain_hash_candidates_by_size(&mut files);
+
+        assert_eq!(files.len(), 2);
+        assert!(files.iter().all(|file| file.size == 2));
     }
 }
